@@ -2,3 +2,4 @@ data/
 CS5104_Project_DataGen/*/output/
 *.pdf
 __pycache__/
+CS5104_Project_DataGen/de0[2-8]_*/
