@@ -18,7 +18,8 @@ Thiết kế chi tiết và lập luận: [`docs/design.html`](docs/design.html)
 - **Khoá chính toàn hệ:** mỗi trạm một dải `site_no·10⁶+1 … site_no·10⁶+999999` (tayninh 1, hcm 2, cantho 3, dongnai 4). Mỗi trạm có sequence cục bộ `patient_id_seq`, `visit_id_seq`, `prescription_id_seq`, và CHECK chặn id ngoài dải.
 - **Khoá ngoại:** cả 9 FK đều nằm trong cùng một trạm (FK thật).
 - **CHECK jsonb:** `visit_result_ck` kiểm đủ key theo `specialty`.
-- **Trạm trung tâm:** 3 foreign server, có `fetch_size 10000` và `async_capable`. Có 8 view `all_<bảng>` (UNION ALL 4 trạm). Q2 và Q5 viết thành 4 nhánh để join và gộp được đẩy xuống từng trạm.
+- **Trạm trung tâm:** 3 foreign server, có `fetch_size 10000` và `async_capable`. Có 8 view `all_<bảng>` (UNION ALL 4 trạm).
+- **Gộp hai giai đoạn:** mỗi trạm có 2 view gộp sẵn là `drug_cost_by_year` (Q2) và `cardio_patient_bp` (Q5). Trung tâm chỉ nhận về kết quả đã gộp, 1 dòng mỗi trạm cho Q2. Mặc định `postgres_fdw` không đẩy join + `GROUP BY` xuống trạm. Bật `use_remote_estimate` thì có đẩy, nhưng riêng bước lập kế hoạch đã mất 1–2,8 s khi trễ 30 ms. Dùng view thì Q2 giảm từ 930 ms xuống 78 ms.
 
 ## 2. Triển khai
 
@@ -39,7 +40,9 @@ docker/Dockerfile        postgres:18 + iproute2
 Makefile, mk/*.mk        các lệnh make
 sql/schema_central.sql   lược đồ tập trung (đúng sơ đồ đề, dùng cho cả ref và 4 trạm)
 sql/site_constraints.sql CHECK mảnh, CHECK dải khoá, CHECK jsonb, sequence
-sql/link.sql             postgres_fdw + view all_* ở trạm trung tâm
+sql/site_views.sql       view gộp sẵn ở mỗi trạm (Q2, Q5)
+scripts/link.sh          postgres_fdw + view all_* ở trạm trung tâm
+scripts/cluster.sh       make all / site-down / site-up (điều khiển B, C qua SSH)
 sql/queries/             Q1–Q5 bản phân tán (chạy ở tayninh)
 sql/queries_ref/         Q1–Q5 bản tập trung (chạy ở ref)
 scripts/load.sh          nạp ref từ CSV, rồi chia mảnh nạp vào 4 trạm
@@ -60,7 +63,10 @@ results/                 results.csv, EXPLAIN Q1–Q5, số liệu N1/N4/N5
   python3 -m venv ~/cs5104-venv && ~/cs5104-venv/bin/pip install "psycopg[binary]>=3.1"
   ```
   Makefile tự dùng `~/cs5104-venv/bin/python` nếu có.
-- `make all` cần máy A SSH được sang B và C bằng khoá, không hỏi mật khẩu.
+- `make all`, `site-down` và `site-up` cần máy A SSH được sang B và C bằng khoá, không hỏi mật khẩu. User và IP lấy từ `deploy.toml` (`[machines.X] ssh_user, ip`). Thiết lập một lần trên máy A:
+  ```bash
+  ssh-copy-id labsoe@192.168.80.202 && ssh-copy-id labsit06@192.168.80.203
+  ```
 - Các cổng 5433–5437, 8080, 8090 phải mở trong LAN.
 
 > **Bảo mật:** các container dùng `POSTGRES_HOST_AUTH_METHOD=trust` (khuôn của `cs5104_labs/lan`). Chỉ chạy trong mạng lab, không mở các cổng này ra Internet.
@@ -79,6 +85,8 @@ make all
 1. Đẩy mã sang B, C.
 2. Chạy `make up` trên A, B, C.
 3. Chạy `data → load → link → check → bench`.
+
+Đo thực tế: khoảng 52 s, `make check` ra 124 PASS. **Lệnh này nạp lại dữ liệu gốc, nên các dòng nhập tay sẽ mất.**
 
 ### Cách 2 — từng bước
 

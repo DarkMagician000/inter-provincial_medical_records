@@ -1,30 +1,30 @@
 Python 3.13.11; psycopg 3.3.6; PostgreSQL 180006; runs=5; autocommit; unprepared
-HashAggregate  (cost=9400.53..9402.53 rows=200 width=4) (actual time=355.807..356.282 rows=7516.00 loops=1)
+HashAggregate  (cost=1908.74..1910.74 rows=200 width=4) (actual time=338.661..339.165 rows=7516.00 loops=1)
   Output: visit.patient_id
   Group Key: visit.patient_id
   Batches: 1  Memory Usage: 553kB
   Buffers: shared hit=736
-  ->  Append  (cost=0.00..9370.58 rows=11980 width=4) (actual time=27.093..354.432 rows=9348.00 loops=1)
+  ->  Append  (cost=0.00..1898.59 rows=4059 width=4) (actual time=18.149..337.295 rows=9348.00 loops=1)
         Buffers: shared hit=736
-        ->  Seq Scan on public.visit  (cost=0.00..1341.41 rows=4044 width=4) (actual time=0.030..2.823 rows=3068.00 loops=1)
+        ->  Seq Scan on public.visit  (cost=0.00..1341.41 rows=4044 width=4) (actual time=0.019..3.555 rows=3068.00 loops=1)
               Output: visit.patient_id
               Filter: ((visit.specialty = 'cardio'::text) AND (((visit.result ->> 'bp_systolic'::text))::integer >= 140))
               Rows Removed by Filter: 23839
               Buffers: shared hit=736
-        ->  Async Foreign Scan on hcm.visit visit_1  (cost=100.00..4230.74 rows=4262 width=4) (actual time=24.110..63.544 rows=3382.00 loops=1)
+        ->  Async Foreign Scan on hcm.visit visit_1  (cost=100.00..178.96 rows=5 width=4) (actual time=260.698..309.435 rows=3382.00 loops=1)
               Output: visit_1.patient_id
               Filter: (((visit_1.result ->> 'bp_systolic'::text))::integer >= 140)
               Rows Removed by Filter: 9405
               Remote SQL: SELECT patient_id, result FROM public.visit WHERE ((specialty = 'cardio'))
-        ->  Async Foreign Scan on cantho.visit visit_2  (cost=100.00..2282.79 rows=2271 width=4) (actual time=267.351..268.062 rows=1769.00 loops=1)
+        ->  Async Foreign Scan on cantho.visit visit_2  (cost=100.00..178.96 rows=5 width=4) (actual time=17.504..18.239 rows=1769.00 loops=1)
               Output: visit_2.patient_id
               Filter: (((visit_2.result ->> 'bp_systolic'::text))::integer >= 140)
               Rows Removed by Filter: 5045
               Remote SQL: SELECT patient_id, result FROM public.visit WHERE ((specialty = 'cardio'))
-        ->  Async Foreign Scan on dongnai.visit visit_3  (cost=100.00..1455.74 rows=1403 width=4) (actual time=5.710..6.204 rows=1129.00 loops=1)
+        ->  Async Foreign Scan on dongnai.visit visit_3  (cost=100.00..178.96 rows=5 width=4) (actual time=5.090..5.515 rows=1129.00 loops=1)
               Output: visit_3.patient_id
               Filter: (((visit_3.result ->> 'bp_systolic'::text))::integer >= 140)
               Rows Removed by Filter: 3081
               Remote SQL: SELECT patient_id, result FROM public.visit WHERE ((specialty = 'cardio'))
-Planning Time: 0.144 ms
-Execution Time: 377.805 ms
+Planning Time: 0.158 ms
+Execution Time: 369.242 ms

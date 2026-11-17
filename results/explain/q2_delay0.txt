@@ -1,65 +1,69 @@
 Python 3.13.11; psycopg 3.3.6; PostgreSQL 180006; runs=5; autocommit; unprepared
-Append  (cost=3560.12..10911.31 rows=4 width=39) (actual time=48.362..54.045 rows=4.00 loops=1)
-  Buffers: shared hit=1229
-  ->  HashAggregate  (cost=3560.12..3560.13 rows=1 width=40) (actual time=34.015..34.020 rows=1.00 loops=1)
-        Output: p.home_province, sum(((pr.quantity)::numeric * d.price))
-        Group Key: p.home_province
-        Batches: 1  Memory Usage: 32kB
-        Buffers: shared hit=1229
-        ->  Hash Join  (cost=1590.89..3109.26 rows=45086 width=18) (actual time=4.669..24.970 rows=45136.00 loops=1)
-              Output: p.home_province, pr.quantity, d.price
-              Inner Unique: true
-              Hash Cond: (pr.drug_code = d.drug_code)
-              Buffers: shared hit=1229
-              ->  Hash Join  (cost=1574.64..2973.66 rows=45086 width=18) (actual time=4.567..19.518 rows=45136.00 loops=1)
-                    Output: pr.quantity, pr.drug_code, p.home_province
-                    Inner Unique: true
-                    Hash Cond: (v.patient_id = p.patient_id)
-                    Buffers: shared hit=1224
-                    ->  Hash Join  (cost=1365.22..2645.80 rows=45086 width=14) (actual time=3.577..13.711 rows=45136.00 loops=1)
-                          Output: pr.quantity, pr.drug_code, v.patient_id
+Append  (cost=2746.75..3119.10 rows=16 width=62) (actual time=52.247..52.297 rows=4.00 loops=1)
+  Buffers: shared hit=1245
+  ->  Subquery Scan on drug_cost_by_year  (cost=2746.75..2750.99 rows=1 width=40) (actual time=40.823..40.826 rows=1.00 loops=1)
+        Output: drug_cost_by_year.home_province, drug_cost_by_year.total_cost
+        Buffers: shared hit=1245
+        ->  GroupAggregate  (cost=2746.75..2750.98 rows=1 width=44) (actual time=40.822..40.824 rows=1.00 loops=1)
+              Output: p.home_province, (EXTRACT(year FROM v.visit_date))::integer, sum(((pr.quantity)::numeric * d.price))
+              Group Key: p.home_province
+              Buffers: shared hit=1245
+              ->  Sort  (cost=2746.75..2747.60 rows=337 width=22) (actual time=32.724..33.953 rows=45136.00 loops=1)
+                    Output: p.home_province, v.visit_date, pr.quantity, d.price
+                    Sort Key: p.home_province
+                    Sort Method: quicksort  Memory: 3300kB
+                    Buffers: shared hit=1245
+                    ->  Hash Join  (cost=1450.24..2732.60 rows=337 width=22) (actual time=6.917..27.315 rows=45136.00 loops=1)
+                          Output: p.home_province, v.visit_date, pr.quantity, d.price
                           Inner Unique: true
-                          Hash Cond: (pr.visit_id = v.visit_id)
-                          Buffers: shared hit=1168
-                          ->  Seq Scan on public.prescription pr  (cost=0.00..1104.13 rows=67213 width=14) (actual time=0.002..2.165 rows=67213.00 loops=1)
-                                Output: pr.prescription_id, pr.visit_id, pr.drug_code, pr.quantity, pr.days
-                                Buffers: shared hit=432
-                          ->  Hash  (cost=1139.61..1139.61 rows=18049 width=8) (actual time=3.564..3.566 rows=18059.00 loops=1)
-                                Output: v.visit_id, v.patient_id
-                                Buckets: 32768  Batches: 1  Memory Usage: 962kB
-                                Buffers: shared hit=736
-                                ->  Seq Scan on public.visit v  (cost=0.00..1139.61 rows=18049 width=8) (actual time=0.003..2.020 rows=18059.00 loops=1)
-                                      Output: v.visit_id, v.patient_id
-                                      Filter: ((v.visit_date >= '2025-01-01'::date) AND (v.visit_date < '2026-01-01'::date))
-                                      Rows Removed by Filter: 8848
-                                      Buffers: shared hit=736
-                    ->  Hash  (cost=124.19..124.19 rows=6819 width=12) (actual time=0.986..0.986 rows=6819.00 loops=1)
-                          Output: p.home_province, p.patient_id
-                          Buckets: 8192  Batches: 1  Memory Usage: 358kB
-                          Buffers: shared hit=56
-                          ->  Seq Scan on public.patient p  (cost=0.00..124.19 rows=6819 width=12) (actual time=0.003..0.381 rows=6819.00 loops=1)
-                                Output: p.home_province, p.patient_id
-                                Buffers: shared hit=56
-              ->  Hash  (cost=10.00..10.00 rows=500 width=12) (actual time=0.091..0.091 rows=500.00 loops=1)
-                    Output: d.price, d.drug_code
-                    Buckets: 1024  Batches: 1  Memory Usage: 30kB
-                    Buffers: shared hit=5
-                    ->  Seq Scan on public.drug d  (cost=0.00..10.00 rows=500 width=12) (actual time=0.012..0.050 rows=500.00 loops=1)
-                          Output: d.price, d.drug_code
-                          Buffers: shared hit=5
-  ->  Async Foreign Scan  (cost=3894.92..3895.14 rows=1 width=36) (actual time=7.063..7.064 rows=1.00 loops=1)
-        Output: p_1.home_province, (sum(((pr_1.quantity)::numeric * d_1.price)))
-        Relations: Aggregate on ((((hcm.prescription pr_1) INNER JOIN (hcm.visit v_1)) INNER JOIN (hcm.patient p_1)) INNER JOIN (hcm.drug d_1))
-        Remote SQL: SELECT r4.home_province, sum((r1.quantity * r6.price)) FROM (((public.prescription r1 INNER JOIN public.visit r2 ON (((r1.visit_id = r2.visit_id)) AND ((r2.visit_date >= '2025-01-01')) AND ((r2.visit_date < '2026-01-01')))) INNER JOIN public.patient r4 ON (((r2.patient_id = r4.patient_id)))) INNER JOIN public.drug r6 ON (((r1.drug_code = r6.drug_code)))) GROUP BY 1
-  ->  Async Foreign Scan  (cost=2095.06..2095.29 rows=1 width=39) (actual time=6.826..6.826 rows=1.00 loops=1)
-        Output: p_2.home_province, (sum(((pr_2.quantity)::numeric * d_2.price)))
-        Relations: Aggregate on ((((cantho.prescription pr_2) INNER JOIN (cantho.visit v_2)) INNER JOIN (cantho.patient p_2)) INNER JOIN (cantho.drug d_2))
-        Remote SQL: SELECT r4.home_province, sum((r1.quantity * r6.price)) FROM (((public.prescription r1 INNER JOIN public.visit r2 ON (((r1.visit_id = r2.visit_id)) AND ((r2.visit_date >= '2025-01-01')) AND ((r2.visit_date < '2026-01-01')))) INNER JOIN public.patient r4 ON (((r2.patient_id = r4.patient_id)))) INNER JOIN public.drug r6 ON (((r1.drug_code = r6.drug_code)))) GROUP BY 1
-  ->  Async Foreign Scan  (cost=1360.51..1360.73 rows=1 width=40) (actual time=0.508..0.508 rows=1.00 loops=1)
-        Output: p_3.home_province, (sum(((pr_3.quantity)::numeric * d_3.price)))
-        Relations: Aggregate on ((((dongnai.prescription pr_3) INNER JOIN (dongnai.visit v_3)) INNER JOIN (dongnai.patient p_3)) INNER JOIN (dongnai.drug d_3))
-        Remote SQL: SELECT r4.home_province, sum((r1.quantity * r6.price)) FROM (((public.prescription r1 INNER JOIN public.visit r2 ON (((r1.visit_id = r2.visit_id)) AND ((r2.visit_date >= '2025-01-01')) AND ((r2.visit_date < '2026-01-01')))) INNER JOIN public.patient r4 ON (((r2.patient_id = r4.patient_id)))) INNER JOIN public.drug r6 ON (((r1.drug_code = r6.drug_code)))) GROUP BY 1
+                          Hash Cond: (pr.drug_code = d.drug_code)
+                          Buffers: shared hit=1245
+                          ->  Hash Join  (cost=1433.99..2715.46 rows=337 width=22) (actual time=6.822..21.916 rows=45136.00 loops=1)
+                                Output: pr.quantity, pr.drug_code, v.visit_date, p.home_province
+                                Inner Unique: true
+                                Hash Cond: (v.patient_id = p.patient_id)
+                                Buffers: shared hit=1240
+                                ->  Hash Join  (cost=1208.56..2489.15 rows=337 width=18) (actual time=5.801..16.168 rows=45136.00 loops=1)
+                                      Output: pr.quantity, pr.drug_code, v.visit_date, v.patient_id
+                                      Inner Unique: true
+                                      Hash Cond: (pr.visit_id = v.visit_id)
+                                      Buffers: shared hit=1168
+                                      ->  Seq Scan on public.prescription pr  (cost=0.00..1104.13 rows=67213 width=14) (actual time=0.004..2.665 rows=67213.00 loops=1)
+                                            Output: pr.prescription_id, pr.visit_id, pr.drug_code, pr.quantity, pr.days
+                                            Buffers: shared hit=432
+                                      ->  Hash  (cost=1206.87..1206.87 rows=135 width=12) (actual time=5.793..5.794 rows=18059.00 loops=1)
+                                            Output: v.visit_date, v.visit_id, v.patient_id
+                                            Buckets: 32768 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 1032kB
+                                            Buffers: shared hit=736
+                                            ->  Seq Scan on public.visit v  (cost=0.00..1206.87 rows=135 width=12) (actual time=0.005..4.322 rows=18059.00 loops=1)
+                                                  Output: v.visit_date, v.visit_id, v.patient_id
+                                                  Filter: ((EXTRACT(year FROM v.visit_date))::integer = 2025)
+                                                  Rows Removed by Filter: 8848
+                                                  Buffers: shared hit=736
+                                ->  Hash  (cost=140.19..140.19 rows=6819 width=12) (actual time=1.017..1.018 rows=6819.00 loops=1)
+                                      Output: p.home_province, p.patient_id
+                                      Buckets: 8192  Batches: 1  Memory Usage: 358kB
+                                      Buffers: shared hit=72
+                                      ->  Seq Scan on public.patient p  (cost=0.00..140.19 rows=6819 width=12) (actual time=0.004..0.418 rows=6819.00 loops=1)
+                                            Output: p.home_province, p.patient_id
+                                            Buffers: shared hit=72
+                          ->  Hash  (cost=10.00..10.00 rows=500 width=12) (actual time=0.087..0.087 rows=500.00 loops=1)
+                                Output: d.price, d.drug_code
+                                Buckets: 1024  Batches: 1  Memory Usage: 30kB
+                                Buffers: shared hit=5
+                                ->  Seq Scan on public.drug d  (cost=0.00..10.00 rows=500 width=12) (actual time=0.013..0.045 rows=500.00 loops=1)
+                                      Output: d.price, d.drug_code
+                                      Buffers: shared hit=5
+  ->  Async Foreign Scan on hcm.drug_cost_by_year drug_cost_by_year_1  (cost=100.00..122.67 rows=5 width=64) (actual time=4.197..4.198 rows=1.00 loops=1)
+        Output: drug_cost_by_year_1.home_province, drug_cost_by_year_1.total_cost
+        Remote SQL: SELECT home_province, total_cost FROM public.drug_cost_by_year WHERE ((year = 2025))
+  ->  Async Foreign Scan on cantho.drug_cost_by_year drug_cost_by_year_2  (cost=100.00..122.67 rows=5 width=64) (actual time=6.445..6.445 rows=1.00 loops=1)
+        Output: drug_cost_by_year_2.home_province, drug_cost_by_year_2.total_cost
+        Remote SQL: SELECT home_province, total_cost FROM public.drug_cost_by_year WHERE ((year = 2025))
+  ->  Async Foreign Scan on dongnai.drug_cost_by_year drug_cost_by_year_3  (cost=100.00..122.67 rows=5 width=64) (actual time=0.806..0.806 rows=1.00 loops=1)
+        Output: drug_cost_by_year_3.home_province, drug_cost_by_year_3.total_cost
+        Remote SQL: SELECT home_province, total_cost FROM public.drug_cost_by_year WHERE ((year = 2025))
 Planning:
   Buffers: shared hit=18
-Planning Time: 206.154 ms
-Execution Time: 63.647 ms
+Planning Time: 0.309 ms
+Execution Time: 75.573 ms
