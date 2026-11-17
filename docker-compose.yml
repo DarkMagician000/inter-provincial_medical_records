@@ -1,0 +1,54 @@
+name: cs5104final
+
+x-postgres: &postgres
+  build: ./docker
+  image: cs5104/postgres-netem:18
+  cap_add: [NET_ADMIN]
+  command: ["postgres", "-c", "listen_addresses=*"]
+  environment:
+    POSTGRES_HOST_AUTH_METHOD: trust
+    POSTGRES_DB: hospital
+  healthcheck:
+    test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "hospital"]
+    interval: 2s
+    timeout: 5s
+    retries: 30
+
+services:
+  tayninh:
+    <<: *postgres
+    profiles: [A]
+    container_name: final_tayninh
+    ports: ["5433:5432"]
+    volumes: ["tayninh_data:/var/lib/postgresql"]
+  hcm:
+    <<: *postgres
+    profiles: [B]
+    container_name: final_hcm
+    ports: ["5434:5432"]
+    volumes: ["hcm_data:/var/lib/postgresql"]
+  cantho:
+    <<: *postgres
+    profiles: [C]
+    container_name: final_cantho
+    ports: ["5435:5432"]
+    volumes: ["cantho_data:/var/lib/postgresql"]
+  dongnai:
+    <<: *postgres
+    profiles: [A]
+    container_name: final_dongnai
+    ports: ["5436:5432"]
+    volumes: ["dongnai_data:/var/lib/postgresql"]
+  ref:
+    <<: *postgres
+    profiles: [A]
+    container_name: final_ref
+    ports: ["5437:5432"]
+    volumes: ["ref_data:/var/lib/postgresql"]
+
+volumes:
+  tayninh_data:
+  hcm_data:
+  cantho_data:
+  dongnai_data:
+  ref_data:

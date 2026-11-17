@@ -1,0 +1,4 @@
+data/
+CS5104_Project_DataGen/*/output/
+*.pdf
+__pycache__/

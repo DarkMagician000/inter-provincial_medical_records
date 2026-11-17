@@ -1,0 +1,565 @@
+<title>Thiết kế phân tán Đề 1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: tài liệu thiết kế một cột đọc, mục lục dính bên trái ở màn rộng; màu 4 trạm là hệ mã hoá xuyên suốt */
+:root{
+  --bg:#f6f7f8; --surface:#ffffff; --fg:#1b2127; --muted:#5b6670; --line:#dde2e6;
+  --accent:#1f5f8b; --accent-soft:#e3eef6;
+  --tn:#2e7d5b; --hcm:#b5532c; --ct:#6a4fa3; --dn:#9a7a12;
+  --ok:#2e7d4f; --bad:#b3362f; --code-bg:#eef1f4;
+  --f-body:"Be Vietnam Pro",system-ui,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12161a; --surface:#1a2026; --fg:#e4e8ec; --muted:#9aa5ae; --line:#2c343c;
+  --accent:#6fb3e0; --accent-soft:#1c2c38;
+  --tn:#5cc495; --hcm:#e8875e; --ct:#a990e0; --dn:#d6b44a;
+  --ok:#5cc48a; --bad:#ec7a72; --code-bg:#20272e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161a; --surface:#1a2026; --fg:#e4e8ec; --muted:#9aa5ae; --line:#2c343c;
+  --accent:#6fb3e0; --accent-soft:#1c2c38;
+  --tn:#5cc495; --hcm:#e8875e; --ct:#a990e0; --dn:#d6b44a;
+  --ok:#5cc48a; --bad:#ec7a72; --code-bg:#20272e; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.65 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-top:40px;max-height:100vh;overflow:auto;font-size:13px}
+nav.toc b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:3px 0 3px 10px;border-left:2px solid var(--line)}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);border-left-color:var(--accent);outline:none}
+main{min-width:0;padding-top:40px}
+header.hero{display:grid;gap:10px;padding-bottom:28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:30px;line-height:1.25;margin:0;text-wrap:balance;font-weight:700}
+h2{font-size:22px;line-height:1.3;margin:0;text-wrap:balance;font-weight:700}
+h3{font-size:16px;margin:0;font-weight:600}
+p{margin:0;max-width:72ch}
+section{display:grid;gap:16px;padding-block:36px;border-bottom:1px solid var(--line)}
+section>.num{font:600 12px var(--f-mono);color:var(--accent);letter-spacing:.05em}
+.lead{color:var(--muted);max-width:72ch}
+ul,ol{margin:0;padding-left:20px;max-width:76ch;display:grid;gap:4px}
+code{font:13px var(--f-mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{margin:0;background:var(--code-bg);border-radius:8px;padding:14px 16px;overflow-x:auto;font:12.5px/1.55 var(--f-mono)}
+pre code{background:none;padding:0}
+.cmt{color:var(--muted)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;font-weight:600;color:var(--muted);background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.why{background:var(--accent-soft);border-radius:8px;padding:14px 18px;display:grid;gap:8px}
+.why>h3{color:var(--accent);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+.warn{border:1px dashed var(--bad);border-radius:8px;padding:12px 16px;display:grid;gap:6px}
+.warn>h3{color:var(--bad);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+.site{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
+.site::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor}
+.tn{color:var(--tn)}.hcm{color:var(--hcm)}.ct{color:var(--ct)}.dn{color:var(--dn)}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+.p-h{color:var(--accent)}.p-d{color:var(--tn)}.p-r{color:var(--hcm)}
+.ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.machines{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.mach{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:10px;align-content:start;min-width:0}
+.mach .hd{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+.mach .ip{font:12.5px var(--f-mono);color:var(--muted)}
+.mach .note{color:var(--muted);font-size:12.5px}
+.sitebox{border-left:3px solid currentColor;padding:4px 0 4px 10px;display:grid;gap:2px}
+.sitebox small{color:var(--muted);font-size:12.5px}
+.bars{display:grid;gap:8px;max-width:640px}
+.bar{display:grid;grid-template-columns:90px minmax(0,1fr) 100px;gap:10px;align-items:center;font-size:13px}
+.bar .track{height:12px;background:var(--code-bg);border-radius:3px;overflow:hidden}
+.bar .fill{height:100%;background:currentColor}
+.bar .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--fg)}
+.case{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start}
+.case .k{font:600 13px var(--f-mono);color:var(--muted);padding-top:2px}
+.case>div{display:grid;gap:6px;min-width:0}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13.5px}
+.flow .node{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 10px}
+.flow .arr{color:var(--muted)}
+a{color:var(--accent)}
+html{scroll-behavior:smooth}
+@media (max-width:860px){.wrap{grid-template-columns:minmax(0,1fr);gap:0}nav.toc{display:none}h1{font-size:25px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Mục lục">
+  <b>Mục lục</b>
+  <a href="#tomtat">Tóm tắt</a>
+  <a href="#de">Đề yêu cầu gì</a>
+  <a href="#du-lieu">Dữ liệu</a>
+  <a href="#chia">1 · Chia bảng</a>
+  <a href="#capphat">2 · Cấp phát</a>
+  <a href="#pk">3 · Khoá chính</a>
+  <a href="#fk">4 · Khoá ngoại</a>
+  <a href="#check">5 · Ràng buộc mảnh</a>
+  <a href="#lienvung">6 · Liên vùng</a>
+  <a href="#trungtam">Trạm trung tâm, Q1–Q5</a>
+  <a href="#loai">Phương án đã loại</a>
+  <a href="#ruiro">Rủi ro, cần đo</a>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">CS5104 · Project cuối kỳ · Đề 1 · k = 4 · seed 731905</div>
+  <h1>Thiết kế phân tán: Hồ sơ khám bệnh liên tỉnh</h1>
+  <p class="lead">Trả lời 6 câu hỏi của Mục 3 trong đề: chia bảng, cấp phát, khoá chính, khoá ngoại, ràng buộc mảnh, liên vùng. Mỗi quyết định kèm lý do và số liệu đo trên bộ dữ liệu lab (20.000 bệnh nhân, 80.000 lượt khám, 200.000 dòng đơn thuốc). Bản nháp M1, 17/11/2026.</p>
+  <p class="lead">Bốn trạm được mã màu xuyên suốt: <span class="site tn">tayninh</span> (trung tâm) · <span class="site hcm">hcm</span> · <span class="site ct">cantho</span> · <span class="site dn">dongnai</span>.</p>
+</header>
+
+<section id="tomtat">
+  <h2>Tóm tắt thiết kế</h2>
+  <p>Ý tưởng chính: <b>hồ sơ đi theo người bệnh</b>. Bệnh nhân được chia theo tỉnh cư trú. Mọi thứ thuộc về bệnh nhân (lượt khám, đơn thuốc, kết quả khám) về cùng trạm với bệnh nhân. Hai bảng danh mục nhỏ (bệnh viện, thuốc) được chép ra mọi trạm. Nhờ vậy mọi khoá ngoại đều nằm gọn trong một trạm.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Bảng</th><th>Cách chia</th><th>Theo</th><th class="n">Dòng</th><th>Lý do ngắn</th></tr></thead>
+    <tbody>
+      <tr><td><code>patient</code></td><td><span class="pill p-h">ngang chính</span></td><td><code>home_province</code></td><td class="n">20.000</td><td>Vùng = tỉnh cư trú; Q1, Q2 hỏi theo tỉnh cư trú</td></tr>
+      <tr><td><code>visit</code></td><td><span class="pill p-d">ngang dẫn xuất</span></td><td><code>patient</code></td><td class="n">80.000</td><td>Q1 chạy trọn 1 trạm; FK <code>patient_id</code> cục bộ</td></tr>
+      <tr><td><code>prescription</code></td><td><span class="pill p-d">ngang dẫn xuất</span></td><td><code>visit</code></td><td class="n">200.000</td><td>Q2 tính tổng tại từng trạm</td></tr>
+      <tr><td><code>visit_cardio</code>, <code>visit_eye</code>, <code>visit_blood</code></td><td><span class="pill p-d">ngang dẫn xuất</span></td><td><code>visit</code></td><td class="n">80.000</td><td>Bản quan hệ của jsonb, 1-1 với visit</td></tr>
+      <tr><td><code>visit_eye_diagnosis</code></td><td><span class="pill p-d">ngang dẫn xuất</span></td><td><code>visit_eye</code></td><td class="n">56.118</td><td>Con của visit_eye</td></tr>
+      <tr><td><code>visit_blood_test</code></td><td><span class="pill p-d">ngang dẫn xuất</span></td><td><code>visit_blood</code></td><td class="n">40.237</td><td>Con của visit_blood</td></tr>
+      <tr><td><code>hospital</code></td><td><span class="pill p-r">sao chép</span></td><td>mọi trạm</td><td class="n">30</td><td>Nhỏ, chỉ đọc, trạm nào cũng tham chiếu đủ 30 viện</td></tr>
+      <tr><td><code>drug</code></td><td><span class="pill p-r">sao chép</span></td><td>mọi trạm</td><td class="n">500</td><td>Nhỏ, chỉ đọc, Q2 cần giá thuốc tại chỗ</td></tr>
+    </tbody>
+  </table></div>
+  <div class="grid2">
+    <div class="why"><h3>Đạt được</h3>
+      <ul>
+        <li>Q1 chạy trọn tại <span class="site tn">tayninh</span>, không có Foreign Scan.</li>
+        <li>9/9 khoá ngoại khai báo thật được trong từng trạm.</li>
+        <li>Q2, Q5 tính tại từng trạm; trạm xa chỉ trả kết quả đã gộp hoặc đã lọc.</li>
+        <li>Thêm dòng mới ở bất kỳ trạm nào mà không cần hỏi trạm khác.</li>
+      </ul>
+    </div>
+    <div class="warn"><h3>Cái giá chấp nhận</h3>
+      <ul>
+        <li>5.724 lượt khám (7,16%) diễn ra ở bệnh viện tỉnh khác nhưng lưu ở tỉnh cư trú.</li>
+        <li>Q3 (khám tại bệnh viện Tây Ninh) phải hỏi cả 4 trạm.</li>
+        <li>Nhập lượt khám liên vùng phải ghi qua mạng sang trạm của bệnh nhân.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="de">
+  <h2>Đề yêu cầu gì</h2>
+  <p>Đề chỉ cho lược đồ tập trung. Nhóm tự quyết cách phân tán nhưng phải giữ 6 ràng buộc bắt buộc. Mọi quyết định dưới đây đều được kiểm lại theo danh sách này.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Ràng buộc bắt buộc (trích đề)</th><th>Thiết kế đáp ứng ở đâu</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Mỗi trạm giữ dữ liệu của vùng mình; không dồn toàn bộ về một trạm.</td><td>Chia theo tỉnh cư trú; CHECK mảnh (<a href="#check">mục 5</a>)</td></tr>
+      <tr><td>2</td><td>Mọi bảng bị chia thoả đầy đủ, tái tạo được, rời nhau.</td><td>Vị từ phủ đủ 4 tỉnh và loại trừ nhau; dẫn xuất qua FK; kiểm bằng <code>make check</code></td></tr>
+      <tr><td>3</td><td>Q1 chạy trọn tại một trạm (EXPLAIN không có Foreign Scan).</td><td>visit dẫn xuất theo patient (<a href="#chia">mục 1</a>)</td></tr>
+      <tr><td>4</td><td>Trạm trung tâm trả lời đủ Q1–Q5, khớp CSDL đối chứng.</td><td>View <code>all_*</code> và cách viết Q2–Q5 (<a href="#trungtam">trạm trung tâm</a>)</td></tr>
+      <tr><td>5</td><td>Mọi khoá chính, khoá ngoại được giữ hoặc kiểm được bằng truy vấn.</td><td>Dải khoá theo trạm (<a href="#pk">mục 3</a>), FK cục bộ (<a href="#fk">mục 4</a>)</td></tr>
+      <tr><td>6</td><td>Không thêm, bớt, đổi tên bảng hay cột (chỉ thêm chỉ mục, CHECK, view).</td><td>Mỗi trạm giữ đúng tên bảng gốc; không thêm cột; sequence là bộ đếm, không phải bảng hay cột</td></tr>
+    </tbody>
+  </table></div>
+  <p>Ba truy vấn quyết định thiết kế. <b>Q1</b> hỏi theo bệnh nhân Tây Ninh và bắt buộc chạy tại 1 trạm. <b>Q2</b> gộp tiền thuốc theo tỉnh cư trú. <b>Q3</b> hỏi theo bệnh viện Tây Ninh, đề gọi là "liên vùng". Q4 và Q5 đếm bệnh nhân có huyết áp tâm thu ≥ 140, đọc từ jsonb và từ bảng quan hệ.</p>
+</section>
+
+<section id="du-lieu">
+  <h2>Dữ liệu: cái gì quyết định kích thước mảnh</h2>
+  <p>Bộ sinh <code>generate.py</code> (không được sửa) định nghĩa sẵn 4 vùng là 4 tỉnh. Mỗi bệnh nhân được bốc tỉnh cư trú ngẫu nhiên theo trọng số <code>WEIGHTS = [0.34, 0.36, 0.18, 0.12]</code>. Mỗi lượt khám chọn bệnh nhân đều nhau, rồi với xác suất <code>CROSS = 0.07</code> khám ở bệnh viện tỉnh khác. Seed cố định nên mọi máy sinh cùng dữ liệu.</p>
+  <p>Vì vậy các mảnh lệch nhau tự nhiên theo tỉ lệ dân số. Đây là câu trả lời cho N1.</p>
+  <div class="bars" aria-label="Số bệnh nhân theo tỉnh cư trú">
+    <div class="bar tn"><span class="site">tayninh</span><div class="track"><div class="fill" style="width:95.1%"></div></div><span class="v">6.819 · 34%</span></div>
+    <div class="bar hcm"><span class="site">hcm</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="v">7.172 · 36%</span></div>
+    <div class="bar ct"><span class="site">cantho</span><div class="track"><div class="fill" style="width:51.4%"></div></div><span class="v">3.683 · 18%</span></div>
+    <div class="bar dn"><span class="site">dongnai</span><div class="track"><div class="fill" style="width:32.4%"></div></div><span class="v">2.326 · 12%</span></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Dòng mỗi mảnh</th><th class="n"><span class="site tn">tayninh</span></th><th class="n"><span class="site hcm">hcm</span></th><th class="n"><span class="site ct">cantho</span></th><th class="n"><span class="site dn">dongnai</span></th><th class="n">Tổng = đối chứng</th></tr></thead>
+    <tbody>
+      <tr><td>patient</td><td class="n">6.819</td><td class="n">7.172</td><td class="n">3.683</td><td class="n">2.326</td><td class="n">20.000</td></tr>
+      <tr><td>visit</td><td class="n">26.907</td><td class="n">28.697</td><td class="n">14.936</td><td class="n">9.460</td><td class="n">80.000</td></tr>
+      <tr><td>prescription</td><td class="n">67.213</td><td class="n">71.622</td><td class="n">37.379</td><td class="n">23.786</td><td class="n">200.000</td></tr>
+      <tr><td>visit_cardio</td><td class="n">12.132</td><td class="n">12.787</td><td class="n">6.814</td><td class="n">4.210</td><td class="n">35.943</td></tr>
+      <tr><td>visit_eye</td><td class="n">9.440</td><td class="n">10.169</td><td class="n">5.168</td><td class="n">3.291</td><td class="n">28.068</td></tr>
+      <tr><td>visit_blood</td><td class="n">5.335</td><td class="n">5.741</td><td class="n">2.954</td><td class="n">1.959</td><td class="n">15.989</td></tr>
+      <tr><td>visit_eye_diagnosis</td><td class="n">18.862</td><td class="n">20.260</td><td class="n">10.371</td><td class="n">6.625</td><td class="n">56.118</td></tr>
+      <tr><td>visit_blood_test</td><td class="n">13.349</td><td class="n">14.515</td><td class="n">7.439</td><td class="n">4.934</td><td class="n">40.237</td></tr>
+      <tr><td>hospital + drug (bản sao)</td><td class="n">530</td><td class="n">530</td><td class="n">530</td><td class="n">530</td><td class="n">530 × 4</td></tr>
+      <tr><th>Tổng mỗi trạm</th><th class="n">160.587</th><th class="n">171.493</th><th class="n">89.274</th><th class="n">57.121</th><th class="n">478.475</th></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="chia">
+  <div class="num">MỤC 3 · CÂU HỎI 1</div>
+  <h2>Chia bảng</h2>
+
+  <h3>1a. Không chia dọc</h3>
+  <p>Chia dọc là tách cột của một bảng ra nhiều trạm. Cách này chỉ có ích khi mỗi vùng dùng một nhóm cột riêng.</p>
+  <ul>
+    <li>Bốn vùng có cùng nghiệp vụ. Tỉ lệ chuyên khoa 45/35/20 như nhau ở mọi tỉnh (<code>generate.py</code> dòng 155). Không có nhóm cột nào chỉ một vùng dùng.</li>
+    <li>Chia dọc <code>visit</code> buộc Q1 phải nối các mảnh dọc lại, có thể qua mạng.</li>
+    <li>Cặp <code>visit.result</code> (jsonb) và 5 bảng quan hệ (<code>visit_cardio</code>…) không phải mảnh dọc. Đề cho sẵn hai cách lưu cùng một dữ liệu để so Q4 với Q5.</li>
+  </ul>
+
+  <h3>1b. patient: ngang chính theo <code>home_province</code></h3>
+  <pre><code>patient_tayninh = σ(home_province = 'tayninh') patient    <span class="cmt">-- 6.819 dòng</span>
+patient_hcm     = σ(home_province = 'hcm')     patient    <span class="cmt">-- 7.172</span>
+patient_cantho  = σ(home_province = 'cantho')  patient    <span class="cmt">-- 3.683</span>
+patient_dongnai = σ(home_province = 'dongnai') patient    <span class="cmt">-- 2.326</span></code></pre>
+  <div class="why"><h3>Vì sao</h3>
+    <ul>
+      <li>Vùng trong đề chính là tỉnh. Cột <code>home_province</code> có đúng 4 giá trị, trùng 4 trạm.</li>
+      <li>Ba quy tắc đúng đắn tự thoả. 4 vị từ phủ hết mọi giá trị nên <b>đầy đủ</b>. Các vị từ loại trừ nhau nên <b>rời nhau</b>. Hợp 4 mảnh bằng UNION ALL ra đúng bảng gốc nên <b>tái tạo được</b>.</li>
+      <li>Q1 ("bệnh nhân Tây Ninh") và Q2 ("theo tỉnh cư trú") đều lọc hoặc gộp theo đúng cột này.</li>
+      <li>Trên mỗi trạm, mảnh vẫn mang tên bảng gốc <code>patient</code>. Ký hiệu <code>patient_hcm</code> chỉ dùng trong tài liệu, vì đề cấm đổi tên bảng.</li>
+    </ul>
+  </div>
+
+  <h3>1c. visit: ngang dẫn xuất theo patient, không theo bệnh viện</h3>
+  <p>Đây là quyết định quan trọng nhất. Một lượt khám có hai tỉnh: tỉnh cư trú của bệnh nhân và tỉnh của bệnh viện. Với 92,84% lượt khám hai tỉnh trùng nhau. Với 7,16% còn lại phải chọn một.</p>
+  <pre><code>visit_tayninh = visit ⋉ patient_tayninh     <span class="cmt">-- semijoin qua patient_id: 26.907 dòng</span>
+<span class="cmt">-- SQL: SELECT v.* FROM visit v WHERE EXISTS (SELECT 1 FROM patient_tayninh p WHERE p.patient_id = v.patient_id)</span></code></pre>
+  <div class="tbl"><table>
+    <thead><tr><th>Tiêu chí</th><th>Chia visit theo bệnh nhân (chọn)</th><th>Chia visit theo bệnh viện</th></tr></thead>
+    <tbody>
+      <tr><td><b>Q1</b>: 1.464 lượt của bệnh nhân Tây Ninh, 3/2026</td><td class="ok">Cả 1.464 lượt ở tayninh, không Foreign Scan</td><td class="bad">105 lượt ở trạm khác (hcm 41, cantho 36, dongnai 28): Q1 buộc có Foreign Scan, vi phạm ràng buộc 3</td></tr>
+      <tr><td><b>Q2</b>: tiền thuốc theo tỉnh cư trú</td><td class="ok">Mỗi trạm tự tính tổng tỉnh mình, trả 1 dòng</td><td class="bad">patient và visit khác trạm, phải kéo dữ liệu về để nối trước</td></tr>
+      <tr><td><b>Q3</b>: khám tại bệnh viện Tây Ninh</td><td>Hỏi 4 trạm, trạm xa trả 43 / 17 / 17 dòng</td><td class="ok">Chạy tại 1 trạm</td></tr>
+      <tr><td><b>Q4/Q5</b>: đếm bệnh nhân</td><td class="ok">Mỗi bệnh nhân ở đúng 1 trạm, cộng thẳng</td><td class="bad">248/7.516 bệnh nhân có lượt cardio ≥ 140 ở nhiều tỉnh, cộng các trạm sẽ đếm trùng</td></tr>
+      <tr><td>FK <code>visit.patient_id</code></td><td class="ok">Luôn cục bộ, khai báo được</td><td class="bad">5.724 FK trỏ sang trạm khác, không khai báo được</td></tr>
+    </tbody>
+  </table></div>
+  <div class="why"><h3>Vì sao</h3>
+    <ul>
+      <li>Giáo trình §2.4: bảng dẫn xuất chỉ chọn <b>một</b> bảng chủ, chọn theo phép nối dùng nhiều nhất. Ví dụ 2.3 (orders chia theo customer hay theo store) giống hệt trường hợp này. Q1, Q2, Q4, Q5 đều nối visit với patient. Chỉ Q3 nối theo hospital.</li>
+      <li>Ràng buộc 3 của đề loại hẳn phương án chia theo bệnh viện.</li>
+      <li>Đề gọi Q3 là truy vấn "liên vùng" (D4), tức là đề dự kiến Q3 phải đi qua mạng.</li>
+      <li>Bộ sinh định nghĩa liên vùng là <code>hospital.province &lt;&gt; patient.home_province</code>. Tỉnh cư trú là gốc; bệnh viện khác tỉnh mới là ngoại lệ.</li>
+      <li>Đối chiếu thực tế (suy luận của nhóm, đề không nói): khớp mô hình hồ sơ sức khoẻ theo người và nơi cư trú (BHYT đăng ký ban đầu, sổ sức khoẻ điện tử). Mô hình bệnh án lưu theo bệnh viện phục vụ kiểu câu Q3, không phải trọng tâm của đề này.</li>
+    </ul>
+  </div>
+
+  <h3>1d. Các bảng con: dẫn xuất tiếp theo cha trực tiếp</h3>
+  <div class="flow" aria-label="Chuỗi dẫn xuất">
+    <span class="node">patient</span><span class="arr">→</span><span class="node">visit</span><span class="arr">→</span><span class="node">prescription · visit_cardio · visit_eye · visit_blood</span><span class="arr">→</span><span class="node">visit_eye_diagnosis · visit_blood_test</span>
+  </div>
+  <ul>
+    <li><code>prescription</code>, <code>visit_cardio</code>, <code>visit_eye</code>, <code>visit_blood</code> dẫn xuất theo <code>visit</code> (qua <code>visit_id</code>).</li>
+    <li><code>visit_eye_diagnosis</code> dẫn xuất theo <code>visit_eye</code>. <code>visit_blood_test</code> dẫn xuất theo <code>visit_blood</code>.</li>
+    <li>Mỗi bảng con chỉ có một bảng cha bị chia, nên không phải chọn bảng chủ. Mọi cặp cha–con nằm cùng trạm.</li>
+  </ul>
+  <div class="why"><h3>Vì sao dẫn xuất thoả 3 quy tắc</h3>
+    <p>Giáo trình §2.4: dẫn xuất qua khoá ngoại thì mỗi dòng con có đúng một cha, và cha nằm ở đúng một mảnh. Vì vậy dòng con rơi vào đúng một mảnh (đầy đủ, rời nhau). Hợp các mảnh con ra đúng bảng gốc (tái tạo được). Điều kiện là FK phải đúng. Bộ sinh bảo đảm điều này: không có <code>visit_id</code> mồ côi.</p>
+  </div>
+
+  <h3>1e. hospital và drug: sao chép ra cả 4 trạm</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Số đo</th><th class="n">Giá trị</th><th>Ý nghĩa</th></tr></thead>
+    <tbody>
+      <tr><td>Bệnh viện mà mỗi trạm tham chiếu</td><td class="n">30 / 30</td><td>Trạm nào cũng có lượt khám ở đủ 30 viện. Chia hospital không bớt được gì trạm cần.</td></tr>
+      <tr><td>Dòng thêm do sao chép</td><td class="n">1.590 (0,33%)</td><td>3 bản sao thêm × 530 dòng, so với 476.885 dòng gốc</td></tr>
+      <tr><td>Q3, trạm xa trả về (sao chép)</td><td class="n">43 / 17 / 17</td><td>Lọc <code>province = 'tayninh'</code> được đẩy xuống từng trạm</td></tr>
+      <tr><td>Q3, trạm xa trả về (nếu chia hospital)</td><td class="n">1.636 / 811 / 549</td><td>Phải kéo toàn bộ visit 3/2026 về trung tâm để nối</td></tr>
+    </tbody>
+  </table></div>
+  <div class="why"><h3>Vì sao</h3>
+    <ul>
+      <li>Giáo trình §2.7: mảnh nhỏ, đọc nhiều, ít ghi thì sao chép ra mọi trạm (Ví dụ 2.5, bảng product).</li>
+      <li>FK <code>visit.hospital_id</code> và <code>prescription.drug_code</code> luôn cục bộ, kể cả với 7,16% lượt khám liên vùng.</li>
+      <li>Q2 lấy giá thuốc tại chỗ. Q3 lọc tỉnh bệnh viện tại chỗ.</li>
+      <li>Bản sao không vi phạm quy tắc rời nhau, vì quy tắc này chỉ áp cho bảng bị chia (giáo trình §2.2).</li>
+      <li>Nhược điểm: thêm bệnh viện hay thuốc mới phải ghi vào 4 trạm. Giao diện nhập liệu của đề không yêu cầu việc này.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="capphat">
+  <div class="num">MỤC 3 · CÂU HỎI 2</div>
+  <h2>Cấp phát</h2>
+  <p>Có 3 máy Ubuntu trong LAN (12 CPU, 7 GB RAM, Docker 29.8). Mỗi trạm là một container PostgreSQL 18 có <code>iproute2</code> để giả lập trễ bằng <code>tc netem</code>. Dựng theo khuôn <code>lan/docker-compose.yml</code> trong gói lab.</p>
+  <div class="machines">
+    <div class="mach">
+      <div class="hd"><h3>Máy A</h3><span class="ip">192.168.80.201</span></div>
+      <div class="sitebox tn"><span class="site">tayninh</span><small>trạm trung tâm · cổng 5433 · 160.587 dòng</small></div>
+      <div class="sitebox dn"><span class="site">dongnai</span><small>cổng 5436 · 57.121 dòng</small></div>
+      <span class="note">Cùng giao diện nhập liệu, dashboard, CSDL đối chứng. Tổng 217.708 dòng.</span>
+    </div>
+    <div class="mach">
+      <div class="hd"><h3>Máy B</h3><span class="ip">192.168.80.202</span></div>
+      <div class="sitebox hcm"><span class="site">hcm</span><small>cổng 5434 · 171.493 dòng</small></div>
+    </div>
+    <div class="mach">
+      <div class="hd"><h3>Máy C</h3><span class="ip">192.168.80.203</span></div>
+      <div class="sitebox ct"><span class="site">cantho</span><small>cổng 5435 · 89.274 dòng</small></div>
+    </div>
+  </div>
+  <div class="why"><h3>Vì sao</h3>
+    <ul>
+      <li><span class="site tn">tayninh</span> ở máy A: đề bắt buộc trạm trung tâm ở cùng giao diện và dashboard trên máy A.</li>
+      <li><span class="site dn">dongnai</span>, mảnh nhỏ nhất, ghép cùng máy A. Như vậy có một cặp đo "cùng máy" (tayninh–dongnai) để so với "qua LAN" (tayninh–hcm, tayninh–cantho) khi giải thích N3.</li>
+      <li><span class="site hcm">hcm</span> và <span class="site ct">cantho</span> mỗi máy một trạm. Demo D8 (tắt một trạm ở máy B) chỉ ảnh hưởng đúng 1 trạm, dễ quan sát.</li>
+      <li>Mỗi trạm một cổng riêng 5433–5436, cố định trên mọi máy. Cổng 5432 trên máy A đã bị PostgreSQL có sẵn chiếm, không đụng tới.</li>
+    </ul>
+  </div>
+  <div class="warn"><h3>Lưu ý mạng</h3>
+    <p>LAN là Wi-Fi. RTT đo từ máy A: tới B trung bình 5,17 ms, tới C 5,81 ms. Trễ nền này đáng kể so với 30 ms của <code>delay-on</code>, nên N3 phải trừ nền. Wi-Fi có jitter, vì vậy đo mỗi truy vấn 5 lần và lấy trung vị như đề yêu cầu.</p>
+  </div>
+</section>
+
+<section id="pk">
+  <div class="num">MỤC 3 · CÂU HỎI 3</div>
+  <h2>Khoá chính duy nhất trên toàn hệ</h2>
+  <p><b>Vấn đề.</b> PRIMARY KEY của mỗi trạm chỉ kiểm tra trùng trong dữ liệu của chính trạm đó. Giáo trình §2.9 viết: "mỗi worker chỉ kiểm tra được tính duy nhất trong phần dữ liệu của mình". Nếu hai trạm cùng cấp số 20001 cho hai bệnh nhân khác nhau, mỗi trạm đều thấy hợp lệ, nhưng <code>all_patient</code> có 2 dòng cùng khoá. Kết quả là vi phạm ràng buộc 5 và hỏng kiểm tra rời nhau.</p>
+  <p><b>Giải pháp.</b> Mỗi trạm một dải số riêng; sequence cục bộ cấp số trong dải; CHECK chặn số ngoài dải.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Trạm</th><th class="n">site_no</th><th class="n">Đầu dải (START)</th><th class="n">Cuối dải (MAXVALUE)</th></tr></thead>
+    <tbody>
+      <tr><td><span class="site tn">tayninh</span></td><td class="n">1</td><td class="n">1.000.001</td><td class="n">1.999.999</td></tr>
+      <tr><td><span class="site hcm">hcm</span></td><td class="n">2</td><td class="n">2.000.001</td><td class="n">2.999.999</td></tr>
+      <tr><td><span class="site ct">cantho</span></td><td class="n">3</td><td class="n">3.000.001</td><td class="n">3.999.999</td></tr>
+      <tr><td><span class="site dn">dongnai</span></td><td class="n">4</td><td class="n">4.000.001</td><td class="n">4.999.999</td></tr>
+    </tbody>
+  </table></div>
+  <pre><code><span class="cmt">-- tại trạm hcm (site_no 2); làm tương tự cho visit_id_seq, prescription_id_seq</span>
+CREATE SEQUENCE patient_id_seq START 2000001 MAXVALUE 2999999 NO CYCLE;
+ALTER TABLE patient ADD CONSTRAINT patient_id_ck
+  CHECK (patient_id &lt;= 20000 OR patient_id BETWEEN 2000001 AND 2999999);
+
+<span class="cmt">-- giao diện gọi nextval trực tiếp; không gắn DEFAULT vào cột</span>
+INSERT INTO patient VALUES (nextval('patient_id_seq'), 'Nguyễn Văn A', 1990, 'M', 'hcm');</code></pre>
+  <div class="tbl"><table>
+    <thead><tr><th>Thành phần</th><th>Chống trường hợp nào</th></tr></thead>
+    <tbody>
+      <tr><td><b>Sequence</b> (bộ đếm, không phải cột)</td><td>Hai người cùng chèn trên một trạm. <code>nextval()</code> là thao tác nguyên tử: hai phiên gọi cùng lúc chắc chắn nhận hai số khác nhau, không cần khoá bảng. Giao dịch ROLLBACK để lại lỗ trong dãy số; chấp nhận được vì khoá chỉ cần duy nhất, không cần liên tục.</td></tr>
+      <tr><td><b>Dải rời nhau</b></td><td>Hai trạm cấp trùng số. Không trạm nào phải hỏi trạm nào, nên khi máy B tắt (D8), các trạm còn lại vẫn thêm dòng bình thường.</td></tr>
+      <tr><td><b>CHECK dải</b></td><td>Ai đó gõ tay id ngoài dải, ví dụ chèn 3.000.001 vào trạm hcm.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="why"><h3>Vì sao chọn cách này</h3>
+    <ul>
+      <li><b>Có tiền lệ trong lab của thầy.</b> <code>lab07_security_pitr/sql/pitr_prepare.sql</code> dùng <code>CREATE SEQUENCE new_order_id START 1000001</code> vì "đơn cũ của STR-lab có mã tới 100000", và dashboard nhận ra dòng mới bằng <code>order_id &gt;= 1000001</code>. Thiết kế này mở rộng ý đó cho 4 trạm; dải của tayninh bắt đầu đúng ở 1.000.001.</li>
+      <li><b>Không đổi lược đồ.</b> Cột vẫn là <code>patient_id</code>, <code>visit_id</code>, <code>prescription_id</code> với kiểu gốc, không gắn DEFAULT. Sequence là cơ chế sinh khoá, không phải bảng hay cột. Mục 3 của đề và README bộ sinh yêu cầu nhóm tự bảo đảm khoá không trùng.</li>
+      <li><b>Đủ chỗ.</b> Khoá gốc lớn nhất là 200.000 (prescription), nhỏ hơn 10<sup>6</sup>. Mỗi trạm còn 999.999 số mới cho mỗi bảng. INTEGER vẫn đủ.</li>
+      <li><b>Đọc được nguồn gốc.</b> Nhìn id là biết dòng tạo ở trạm nào, có ích cho dashboard và demo D7.</li>
+      <li>Dòng gốc giữ id 1..20.000. Bộ sinh đã rải id gốc ngẫu nhiên khắp các tỉnh, nên CHECK có vế <code>id &lt;= max gốc</code>.</li>
+    </ul>
+  </div>
+  <p><b>Dòng mới lấy id theo dải của trạm lưu</b>, tức tỉnh cư trú của bệnh nhân, không theo tỉnh có bệnh viện. Ví dụ: bệnh nhân 14201 (Cần Thơ) tái khám ở bệnh viện 15 (TP.HCM). Lượt khám ghi vào <span class="site ct">cantho</span> và nhận <code>visit_id = 3.000.001</code>.</p>
+  <p><b>Các bảng không cần sequence.</b> <code>visit_cardio</code>, <code>visit_eye</code>, <code>visit_blood</code> dùng lại <code>visit_id</code> của cha. <code>visit_eye_diagnosis</code> có khoá (visit_id, seq). <code>visit_blood_test</code> có khoá (visit_id, code). Các bảng này duy nhất theo cha. <code>hospital</code> và <code>drug</code> là bảng sao chép; trạm không tự thêm dòng vào hai bảng này.</p>
+</section>
+
+<section id="fk">
+  <div class="num">MỤC 3 · CÂU HỎI 4</div>
+  <h2>Khoá ngoại</h2>
+  <p>Lược đồ có 9 khoá ngoại trực tiếp. Sau khi chia, <b>cả 9 đều có cha và con cùng trạm</b>, nên mỗi trạm khai báo FK thật bằng <code>REFERENCES</code>. Lab02 chỉ khai PRIMARY KEY và kiểm bằng 3 quy tắc; thiết kế này chặt hơn.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Khoá ngoại</th><th>Quan hệ</th><th>Cha nằm ở</th><th>Cùng trạm?</th></tr></thead>
+    <tbody>
+      <tr><td><code>visit.patient_id → patient</code></td><td>1-n</td><td>mảnh patient của trạm (visit dẫn xuất theo patient)</td><td class="ok">có</td></tr>
+      <tr><td><code>visit.hospital_id → hospital</code></td><td>1-n</td><td>bản sao hospital tại trạm</td><td class="ok">có</td></tr>
+      <tr><td><code>prescription.visit_id → visit</code></td><td>1-n</td><td>mảnh visit của trạm</td><td class="ok">có</td></tr>
+      <tr><td><code>prescription.drug_code → drug</code></td><td>1-n</td><td>bản sao drug tại trạm</td><td class="ok">có</td></tr>
+      <tr><td><code>visit_cardio.visit_id → visit</code></td><td>1-1</td><td>mảnh visit của trạm</td><td class="ok">có</td></tr>
+      <tr><td><code>visit_eye.visit_id → visit</code></td><td>1-1</td><td>mảnh visit của trạm</td><td class="ok">có</td></tr>
+      <tr><td><code>visit_blood.visit_id → visit</code></td><td>1-1</td><td>mảnh visit của trạm</td><td class="ok">có</td></tr>
+      <tr><td><code>visit_eye_diagnosis.visit_id → visit_eye</code></td><td>1-n</td><td>mảnh visit_eye của trạm</td><td class="ok">có</td></tr>
+      <tr><td><code>visit_blood_test.visit_id → visit_blood</code></td><td>1-n</td><td>mảnh visit_blood của trạm</td><td class="ok">có</td></tr>
+    </tbody>
+  </table></div>
+  <div class="why"><h3>Vì sao không còn FK chéo trạm</h3>
+    <ul>
+      <li>FK giữa các bảng bị chia đi theo chuỗi dẫn xuất (mục 1d), nên con luôn được đặt ở trạm của cha.</li>
+      <li>FK trỏ vào bảng danh mục (hospital, drug) luôn tìm thấy cha ở bản sao tại chỗ.</li>
+      <li>Lượt khám liên vùng là trường hợp dễ hỏng nhất nhưng vẫn cục bộ: bệnh nhân ở trạm của họ, bệnh viện ở bản sao.</li>
+    </ul>
+  </div>
+  <p><b>Kiểm trên toàn hệ</b> trong <code>make check</code>, theo khuôn <code>lab02/a4_check_rules.sql</code>: đếm dòng con mồ côi trên view <code>all_*</code> bằng NOT EXISTS, phải bằng 0. FK cục bộ đã chặn mồ côi trong từng trạm; truy vấn toàn hệ kiểm thêm rằng không có dòng nào bị nạp nhầm trạm.</p>
+  <pre><code>SELECT count(*) AS orphan_visit FROM all_visit v
+WHERE NOT EXISTS (SELECT 1 FROM all_patient p WHERE p.patient_id = v.patient_id);   <span class="cmt">-- phải = 0</span></code></pre>
+</section>
+
+<section id="check">
+  <div class="num">MỤC 3 · CÂU HỎI 5</div>
+  <h2>Ràng buộc mảnh (CHECK)</h2>
+  <p>Đề yêu cầu: "CHECK để mỗi trạm chỉ nhận đúng dòng của mảnh mình; CHECK cho cột loại jsonb". Mục đích là để chính CSDL từ chối dòng sai, không chỉ trông vào giao diện chọn đúng trạm. Có 3 loại CHECK, mỗi loại chặn một kiểu lỗi.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Loại</th><th>Đặt ở</th><th>Chặn</th></tr></thead>
+    <tbody>
+      <tr><td><b>CHECK mảnh</b></td><td><code>patient</code>; các bảng dẫn xuất dựa vào FK cục bộ</td><td>Dòng của vùng khác bị ghi nhầm trạm</td></tr>
+      <tr><td><b>CHECK dải khoá</b></td><td><code>patient_id</code>, <code>visit_id</code>, <code>prescription_id</code></td><td>Id trùng giữa các trạm (<a href="#pk">mục 3</a>)</td></tr>
+      <tr><td><b>CHECK jsonb</b></td><td><code>visit.result</code></td><td><code>result</code> sai cấu trúc so với <code>specialty</code></td></tr>
+    </tbody>
+  </table></div>
+  <pre><code><span class="cmt">-- tại trạm cantho (site_no 3)</span>
+ALTER TABLE patient ADD CONSTRAINT patient_frag_ck CHECK (home_province = 'cantho');
+
+ALTER TABLE visit ADD CONSTRAINT visit_result_ck CHECK (CASE specialty
+  WHEN 'cardio' THEN result ?&amp; array['bp_systolic','bp_diastolic','heart_rate','ecg']
+  WHEN 'eye'    THEN result ?&amp; array['va_left','va_right','iop_mmhg','diagnoses']
+  WHEN 'blood'  THEN result ?&amp; array['wbc','rbc','glucose','tests']
+  ELSE false END);   <span class="cmt">-- ?&amp; = có đủ mọi key; specialty lạ cũng bị chặn</span></code></pre>
+  <div class="why"><h3>Vì sao visit không có CHECK mảnh</h3>
+    <ul>
+      <li>Vị từ chia của visit nằm ở bảng khác (<code>patient.home_province</code>). CHECK của PostgreSQL chỉ đọc được dòng đang ghi, không đọc được bảng khác. Đề cũng cấm thêm cột tỉnh vào visit.</li>
+      <li>Thay vào đó là <b>CHECK bắc cầu qua FK</b>. Visit chỉ trỏ được tới patient của trạm này (FK cục bộ), và patient của trạm này đã bị CHECK đúng tỉnh. Vậy visit cũng đúng vùng. Prescription và các bảng kết quả bắc cầu tiếp qua visit.</li>
+    </ul>
+  </div>
+  <div class="why"><h3>Vì sao cần CHECK jsonb, và vì sao chỉ kiểm key</h3>
+    <ul>
+      <li>jsonb là kiểu tự do. Không ràng buộc thì một lượt <code>cardio</code> có thể chứa kết quả khám mắt hoặc <code>{}</code>.</li>
+      <li>Q4 đọc <code>(result-&gt;&gt;'bp_systolic')::int &gt;= 140</code>. Một lượt cardio thiếu key này cho ra NULL và bị bỏ qua mà không báo lỗi. Trong khi đó Q5 (đọc <code>visit_cardio</code>) vẫn thấy lượt đó, nên D5 sẽ cho hai kết quả khác nhau.</li>
+      <li>Chỉ kiểm có đủ key, không kiểm kiểu số. Như vậy đủ bảo vệ Q4/Q5, và CHECK ngắn, dễ giải thích.</li>
+    </ul>
+  </div>
+
+  <h3>Năm tình huống demo (dữ liệu thật)</h3>
+  <p>Bệnh nhân <b>14201 Lê Quốc Dũng</b>, quê Cần Thơ, có lượt khám 1237 (cardio, 9/6/2025) tại <b>bệnh viện 15 "BV Mắt TP. Hồ Chí Minh 5"</b>. Đây là một lượt khám liên vùng.</p>
+  <div class="case"><span class="k">①</span><div>
+    <p><b>Hợp lệ.</b> Ông Dũng tái khám tim ở bệnh viện 15. Giao diện ghi vào <span class="site ct">cantho</span>.</p>
+    <pre><code>INSERT INTO visit VALUES (nextval('visit_id_seq'), 14201, 15, 'cardio', '2026-03-10',
+  '{"bp_systolic":145,"bp_diastolic":90,"heart_rate":80,"ecg":{"rhythm":"sinus","qt_ms":400}}');
+<span class="cmt">-- visit_id = 3000001 (dải cantho) · patient 14201 có tại chỗ · BV 15 có ở bản sao · đủ key cardio</span></code></pre>
+    <p class="ok">Thành công. Bệnh viện ở HCM nhưng hồ sơ nằm đúng trạm cantho.</p></div></div>
+  <div class="case"><span class="k">②</span><div>
+    <p><b>Ghi nhầm trạm theo bệnh viện.</b> Nhân viên bệnh viện HCM ghi lượt khám này vào <span class="site hcm">hcm</span>.</p>
+    <pre><code>ERROR:  insert or update on table "visit" violates foreign key constraint "visit_patient_id_fkey"
+DETAIL:  Key (patient_id)=(14201) is not present in table "patient".</code></pre>
+    <p>FK chặn, đúng cơ chế bắc cầu: trạm hcm không có bệnh nhân này.</p></div></div>
+  <div class="case"><span class="k">③</span><div>
+    <p><b>Bệnh nhân mới ghi nhầm trạm.</b> Giao diện có lỗi, ghi bệnh nhân Cần Thơ vào <span class="site hcm">hcm</span>.</p>
+    <pre><code>ERROR:  new row for relation "patient" violates check constraint "patient_frag_ck"</code></pre></div></div>
+  <div class="case"><span class="k">④</span><div>
+    <p><b>jsonb sai cấu trúc.</b> Lượt cardio nhưng gửi kết quả khám mắt.</p>
+    <pre><code>ERROR:  new row for relation "visit" violates check constraint "visit_result_ck"</code></pre></div></div>
+  <div class="case"><span class="k">⑤</span><div>
+    <p><b>Gõ tay id của trạm khác.</b> Chèn <code>visit_id = 2000050</code> (dải hcm) vào <span class="site ct">cantho</span>.</p>
+    <pre><code>ERROR:  new row for relation "visit" violates check constraint "visit_id_ck"</code></pre></div></div>
+
+  <div class="warn"><h3>Giới hạn</h3>
+    <ul>
+      <li>CHECK không so được giữa hai bảng. Việc jsonb khớp với <code>visit_cardio</code>, <code>visit_eye</code>… dựa vào giao diện ghi cả hai trong <b>một giao dịch</b>, cộng truy vấn so khớp trong <code>make check</code>.</li>
+      <li><code>UPDATE patient SET home_province = 'hcm'</code> tại trạm cantho bị CHECK chặn. Đây là hành vi đúng: chuyển tỉnh nghĩa là di dời cả hồ sơ (patient, visit, prescription, kết quả) sang trạm mới trong một giao dịch phân tán. Đề không yêu cầu; chỉ nêu khi vấn đáp.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="lienvung">
+  <div class="num">MỤC 3 · CÂU HỎI 6</div>
+  <h2>Liên vùng</h2>
+  <p>"Đặc điểm dữ liệu" của đề: 5–10% lượt khám diễn ra ở bệnh viện khác tỉnh cư trú. Dữ liệu thực có <b>5.724 lượt (7,16%)</b>, thuộc 4.964 bệnh nhân. Theo thiết kế, các lượt này lưu ở tỉnh cư trú (hàng), dù khám ở tỉnh khác (cột).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Tỉnh cư trú ↓ · tỉnh bệnh viện →</th><th class="n">tayninh</th><th class="n">hcm</th><th class="n">cantho</th><th class="n">dongnai</th><th class="n">Liên vùng</th></tr></thead>
+    <tbody>
+      <tr><td><span class="site tn">tayninh</span></td><td class="n"><b>24.933</b></td><td class="n">626</td><td class="n">658</td><td class="n">690</td><td class="n">1.974</td></tr>
+      <tr><td><span class="site hcm">hcm</span></td><td class="n">702</td><td class="n"><b>26.656</b></td><td class="n">653</td><td class="n">686</td><td class="n">2.041</td></tr>
+      <tr><td><span class="site ct">cantho</span></td><td class="n">356</td><td class="n">334</td><td class="n"><b>13.887</b></td><td class="n">359</td><td class="n">1.049</td></tr>
+      <tr><td><span class="site dn">dongnai</span></td><td class="n">257</td><td class="n">194</td><td class="n">209</td><td class="n"><b>8.800</b></td><td class="n">660</td></tr>
+    </tbody>
+  </table></div>
+  <p>Cột <b>tayninh</b> ngoài đường chéo (702 + 356 + 257 = 1.315 lượt) là các lượt khám tại bệnh viện Tây Ninh nhưng nằm ở trạm khác. Đây là lý do Q3 phải đi qua mạng.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Truy vấn</th><th>Bị liên vùng ảnh hưởng?</th><th>Trạm chạm</th><th>Giải thích</th></tr></thead>
+    <tbody>
+      <tr><td>Q1</td><td class="ok">Không</td><td>1 (tayninh)</td><td>Hỏi theo bệnh nhân Tây Ninh. Kể cả 105 lượt khám ở tỉnh khác cũng lưu ở tayninh.</td></tr>
+      <tr><td>Q2</td><td>Không</td><td>4</td><td>Chạm 4 trạm vì gộp theo cả 4 tỉnh cư trú, không phải vì liên vùng. Mỗi trạm tự tính tổng của mình.</td></tr>
+      <tr><td><b>Q3</b></td><td class="bad">Có</td><td>4</td><td>Hỏi theo bệnh viện Tây Ninh: 1.359 lượt ở tayninh + 77 lượt ở trạm khác (hcm 43, cantho 17, dongnai 17) = 1.436.</td></tr>
+      <tr><td>Q4, Q5</td><td>Không</td><td>4</td><td>Chạm 4 trạm vì đếm trên toàn bộ bệnh nhân. Mỗi bệnh nhân ở đúng 1 trạm nên không đếm trùng.</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>Ảnh hưởng tới nhập liệu.</b> Bệnh viện HCM khám cho người Cần Thơ thì giao diện phải ghi qua mạng sang <span class="site ct">cantho</span>. Nếu máy C tắt, giao diện báo lỗi và <b>không</b> ghi tạm vào trạm khác, đúng yêu cầu của đề. Nếu cố ghi nhầm, FK sẽ chặn (tình huống ②).</p>
+</section>
+
+<section id="trungtam">
+  <div class="num">TRẠM TRUNG TÂM</div>
+  <h2>View <code>all_*</code> và cách viết Q1–Q5</h2>
+  <p>Trạm <span class="site tn">tayninh</span> nối tới 3 trạm còn lại bằng <code>postgres_fdw</code>. Bảng của từng trạm xa được import vào một schema riêng. View <code>all_&lt;bảng&gt;</code> hợp 4 nguồn cho 8 bảng bị chia.</p>
+  <pre><code>CREATE SERVER hcm FOREIGN DATA WRAPPER postgres_fdw
+  OPTIONS (host '192.168.80.202', port '5434', dbname 'hospital',
+           fetch_size '10000', async_capable 'true');
+IMPORT FOREIGN SCHEMA public FROM SERVER hcm INTO hcm;   <span class="cmt">-- kể cả hospital, drug của trạm hcm</span>
+<span class="cmt">-- tương tự cho cantho, dongnai</span>
+
+CREATE VIEW all_visit AS
+            SELECT * FROM public.visit     <span class="cmt">-- tayninh, cục bộ</span>
+  UNION ALL SELECT * FROM hcm.visit
+  UNION ALL SELECT * FROM cantho.visit
+  UNION ALL SELECT * FROM dongnai.visit;</code></pre>
+  <div class="why"><h3>Vì sao view UNION ALL, không dùng partitioned table</h3>
+    <ul>
+      <li>Đề yêu cầu "view <code>all_&lt;bảng&gt;</code>" và chỉ cho thêm view. Partitioned table là một bảng mới.</li>
+      <li>visit, prescription và các bảng con không có cột tỉnh để làm khoá phân vùng.</li>
+      <li>UNION ALL không loại trùng nên rẻ hơn UNION. Các mảnh vốn rời nhau nên không cần loại trùng.</li>
+      <li><code>fetch_size 10000</code>: mặc định là 100 dòng một lần FETCH, mỗi lần một vòng khứ hồi (giáo trình §1.4.2). <code>async_capable</code>: hỏi các trạm xa song song (§3.4.4, §3.6).</li>
+    </ul>
+  </div>
+
+  <h3>Quy tắc viết truy vấn</h3>
+  <p>Điều kiện lọc trên view được planner đẩy vào từng nhánh UNION ALL, rồi postgres_fdw gửi sang trạm xa. Nhưng phép nối <b>giữa hai view</b> UNION ALL thì không tách theo trạm được. Vì vậy:</p>
+  <ul>
+    <li><b>Truy vấn chỉ lọc một bảng:</b> viết thẳng trên <code>all_*</code> cho dễ đọc.</li>
+    <li><b>Truy vấn phải nối các bảng bị chia:</b> viết 4 nhánh, mỗi nhánh nối và gộp trọn trong một trạm (gộp 2 giai đoạn, giáo trình Mã 3.2). Có thể đặt mỗi nhánh thành view <code>q2_hcm</code>… cho gọn.</li>
+  </ul>
+  <div class="tbl"><table>
+    <thead><tr><th>Q</th><th>Cách viết</th><th class="n">Trạm xa trả về (hcm / cantho / dongnai)</th><th>Kết quả đối chứng</th></tr></thead>
+    <tbody>
+      <tr><td>Q1</td><td>Bảng cục bộ tayninh</td><td class="n">0</td><td>1.464 (cardio 658, eye 527, blood 279)</td></tr>
+      <tr><td>Q2</td><td>4 nhánh; mỗi trạm nối prescription–visit–patient–drug rồi tính tổng</td><td class="n">1 / 1 / 1 dòng</td><td>439.398.334.000 đ</td></tr>
+      <tr><td>Q3</td><td><code>all_visit</code> + semijoin danh sách bệnh viện Tây Ninh</td><td class="n">43 / 17 / 17</td><td>1.436 lượt</td></tr>
+      <tr><td>Q4</td><td><code>all_visit</code>, lọc cardio và jsonb, DISTINCT tại trung tâm</td><td class="n">3.382 / 1.769 / 1.129</td><td>7.516 bệnh nhân</td></tr>
+      <tr><td>Q5</td><td>4 nhánh; mỗi trạm nối visit_cardio–visit, DISTINCT tại trạm</td><td class="n">2.736 / 1.424 / 884</td><td>7.516 bệnh nhân</td></tr>
+    </tbody>
+  </table></div>
+  <pre><code><span class="cmt">-- Q3: semijoin (giáo trình Mã 3.3); lọc ngày và hospital_id được đẩy xuống từng trạm</span>
+SELECT * FROM all_visit
+WHERE visit_date &gt;= '2026-03-01' AND visit_date &lt; '2026-04-01'
+  AND hospital_id = ANY (ARRAY(SELECT hospital_id FROM hospital WHERE province = 'tayninh'));
+
+<span class="cmt">-- Q2: một nhánh (trạm hcm); mọi bảng cùng server hcm nên cả cụm JOIN + GROUP BY được đẩy xuống</span>
+SELECT p.home_province, sum(pr.quantity * d.price) AS tien
+FROM hcm.prescription pr JOIN hcm.visit v USING (visit_id)
+JOIN hcm.patient p USING (patient_id) JOIN hcm.drug d USING (drug_code)
+WHERE v.visit_date &gt;= '2025-01-01' AND v.visit_date &lt; '2026-01-01'
+GROUP BY 1;</code></pre>
+  <div class="why"><h3>Vì sao Q2 không viết thẳng trên view</h3>
+    <ul>
+      <li>Nối <code>all_prescription</code> với <code>all_visit</code> và <code>all_patient</code> buộc trung tâm kéo về toàn bộ prescription của 3 trạm xa (71.622 / 37.379 / 23.786 dòng; không lọc được vì năm nằm ở visit), cộng visit năm 2025 (19.179 / 10.133 / 6.284) và patient. Tổng khoảng 181 nghìn dòng.</li>
+      <li>Với <code>fetch_size</code> mặc định 100, riêng trạm hcm cần khoảng 980 lần FETCH. Bật trễ 30 ms thì mất khoảng 34 giây. Đây là ước tính, chưa đo.</li>
+      <li>Viết 4 nhánh thì mỗi trạm trả 1 dòng, khoảng 1 vòng khứ hồi.</li>
+      <li>Tiền thuốc = <code>SUM(quantity × price)</code>, không nhân <code>days</code>: số lượng là tổng số đơn vị thuốc kê cho lượt khám đó.</li>
+    </ul>
+  </div>
+  <div class="why"><h3>Vì sao cộng kết quả từng trạm vẫn đúng</h3>
+    <p>Mỗi bệnh nhân nằm ở đúng một trạm, và mọi dữ liệu của họ đi cùng. Vì vậy mỗi đơn thuốc được tính tiền đúng một lần (Q2) và mỗi bệnh nhân được đếm đúng một lần (Q5). Điều kiện là các mảnh phải rời nhau: <code>make check</code> (D2) phải đạt trước khi tin kết quả Q2–Q5.</p>
+  </div>
+</section>
+
+<section id="loai">
+  <h2>Phương án đã cân nhắc và loại</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Phương án</th><th>Lý do loại</th></tr></thead>
+    <tbody>
+      <tr><td>Chia dọc visit hoặc patient</td><td>4 vùng cùng nghiệp vụ, không có nhóm cột riêng; Q1 phải nối mảnh</td></tr>
+      <tr><td>Chia visit theo bệnh viện</td><td>Q1 có Foreign Scan (vi phạm ràng buộc 3); 5.724 FK chéo trạm; Q4 đếm trùng 248 bệnh nhân</td></tr>
+      <tr><td>Chia hospital theo tỉnh</td><td>Mọi trạm cần đủ 30/30 bệnh viện; FK <code>hospital_id</code> chéo trạm; Q3 phải kéo 1.636 / 811 / 549 dòng</td></tr>
+      <tr><td>Một sequence chung ở trạm trung tâm</td><td>Trung tâm là điểm chết duy nhất: tắt máy A thì mọi trạm không thêm được dòng; mỗi lần thêm tốn 1 vòng khứ hồi</td></tr>
+      <tr><td><code>max(id) + 1</code></td><td>Hai phiên đồng thời đọc cùng max nên trùng id; phải khoá bảng</td></tr>
+      <tr><td>Sequence xen kẽ (<code>INCREMENT 4</code>)</td><td>Chạy được, nhưng nhìn id khó biết trạm nguồn; CHECK bằng phép chia lấy dư khó đọc hơn</td></tr>
+      <tr><td>UUID hoặc khoá ghép (site, id)</td><td>Phải đổi kiểu cột hoặc thêm cột, đề cấm</td></tr>
+      <tr><td>Gắn sequence làm DEFAULT của cột</td><td>Thay đổi định nghĩa cột so với CSDL đối chứng; gọi <code>nextval</code> trực tiếp là đủ</td></tr>
+      <tr><td>Partitioned table + foreign partition cho <code>all_*</code></td><td>Là bảng mới; visit và các bảng con không có cột phân vùng</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="ruiro">
+  <h2>Rủi ro và việc cần đo để xác nhận</h2>
+  <ul>
+    <li><b>Đẩy xuống của Q2/Q5.</b> Phải xác nhận bằng <code>EXPLAIN (VERBOSE)</code> rằng <code>Remote SQL</code> chứa cả <code>JOIN … GROUP BY</code>. Nếu không, mỗi trạm xa tạo sẵn một view tính tổng, rồi trung tâm import về.</li>
+    <li><b>Ước tính 34 giây</b> cho Q2 viết thẳng trên view là tính tay. Có thể đo thật một lần làm số so sánh cho N3.</li>
+    <li><b>Wi-Fi.</b> Trễ nền khoảng 5 ms và có jitter, nên N3 phải trừ nền và lấy trung vị. Netem phải gắn đúng card mạng của container.</li>
+    <li><b>Hai cách lưu kết quả khám phải khớp nhau</b> (jsonb và bảng quan hệ). Điều này dựa vào giao diện ghi trong một giao dịch; cần thêm truy vấn so khớp trong <code>make check</code>.</li>
+    <li><b>Hospital và drug phải giống hệt nhau ở 4 trạm.</b> <code>make check</code> nên so số dòng và checksum của 2 bảng này giữa các trạm.</li>
+  </ul>
+</section>
+</main>
+</div>
