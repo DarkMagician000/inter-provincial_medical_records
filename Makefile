@@ -3,6 +3,8 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := up
 MACHINE ?= A
 
+-include mk/*.mk
+
 .PHONY: up down data load test
 
 up:

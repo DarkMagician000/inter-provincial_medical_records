@@ -37,6 +37,10 @@ psql_at() {
     psql -h "${hosts[$site]}" -p "${ports[$site]}" -U postgres -d hospital -v ON_ERROR_STOP=1 -X -q "$@"
 }
 
+for site in "${sites[@]}"; do
+    psql_at "$site" -1 -f sql/site_views.sql
+done
+
 link_args=(-1 -f -)
 for site in "${sites[@]:1}"; do
     link_args+=(-v "${site}_host=${hosts[$site]}" -v "${site}_port=${ports[$site]}")

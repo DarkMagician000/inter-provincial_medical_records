@@ -17,7 +17,7 @@ fi
 
 for host in "${hosts[@]}"; do
     printf 'Deploying to %s\n' "$host"
-    tar -cz --exclude='./data' --exclude='.git' --exclude='*.pdf' --exclude='*/output' . |
+    tar -cz --exclude='./data' --exclude='.git' --exclude='./results' --exclude='*.pdf' --exclude='*/output' . |
         ssh "$host" 'mkdir -p ~/cs5104_final && tar -xz -C ~/cs5104_final'
     if "$up"; then
         machine=${host#cs-}

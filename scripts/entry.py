@@ -414,7 +414,7 @@ def render_page(config: dict, token: str) -> str:
             .replace("__TODAY__", date.today().isoformat()).replace("__YEAR__", str(date.today().year)))
 
 
-PAGE = """<!doctype html>
+PAGE = r"""<!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="__TOKEN__"><title>CS5104 — Nhập hồ sơ khám bệnh</title>
 <style>
@@ -716,6 +716,7 @@ def selftest() -> None:
         assert sum(distribution.values()) == count
         assert max(distribution.values()) - min(distribution.values()) <= 1
     assert option('"<', '<script>') == '<option value="&quot;&lt;">&lt;script&gt;</option>'
+    assert "result.message + '\\nThời gian: '" in PAGE
     assert random_result("blood", random.Random(731905)) == random_result("blood", random.Random(731905))
     print("PASS: 300 random results; JSON/relational consistency; types/ranges; eye seq=1; validation; allocation; HTML escaping.")
 

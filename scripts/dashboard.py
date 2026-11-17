@@ -72,7 +72,7 @@ def load_config(filename: Path) -> dict:
             raise ValueError(f"deploy.toml: cổng không hợp lệ tại {name}")
         result[name] = {
             "name": name, "label": label, "machine": machine,
-            "hostname": config["machines"][machine], "ip": address, "port": port,
+            "hostname": config["machines"][machine]["ssh"], "ip": address, "port": port,
             "central": site.get("central", False), "reference": name == "ref",
         }
     return {"dbname": config["dbname"], "sites": result}
@@ -458,6 +458,8 @@ def selftest() -> None:
     assert NEW_ROWS["patient"] == "patient_id > 20000"
     assert NEW_ROWS["prescription"] == "prescription_id > 200000"
     assert all(NEW_ROWS[table] == "visit_id > 80000" for table in TABLES[5:])
+    deployed = load_config(Path(__file__).resolve().parents[1] / "deploy.toml")
+    assert all(isinstance(site["hostname"], str) for site in deployed["sites"].values())
     print("Selftest: PASS (events, comparisons, freshness, retention; no database)")
 
 

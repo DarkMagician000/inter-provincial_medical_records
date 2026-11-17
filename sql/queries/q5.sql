@@ -1,16 +1,9 @@
--- Patients are disjoint across sites; only within-site deduplication is needed.
-SELECT DISTINCT v.patient_id
-FROM public.visit_cardio c JOIN public.visit v USING (visit_id)
-WHERE c.bp_systolic >= 140
+-- Two-stage aggregation: each site groups by patient, central combines the results.
+-- max >= 140 means at least one qualifying visit; patients are disjoint across sites.
+SELECT patient_id FROM public.cardio_patient_bp WHERE max_bp_systolic >= 140
 UNION ALL
-SELECT DISTINCT v.patient_id
-FROM hcm.visit_cardio c JOIN hcm.visit v USING (visit_id)
-WHERE c.bp_systolic >= 140
+SELECT patient_id FROM hcm.cardio_patient_bp WHERE max_bp_systolic >= 140
 UNION ALL
-SELECT DISTINCT v.patient_id
-FROM cantho.visit_cardio c JOIN cantho.visit v USING (visit_id)
-WHERE c.bp_systolic >= 140
+SELECT patient_id FROM cantho.cardio_patient_bp WHERE max_bp_systolic >= 140
 UNION ALL
-SELECT DISTINCT v.patient_id
-FROM dongnai.visit_cardio c JOIN dongnai.visit v USING (visit_id)
-WHERE c.bp_systolic >= 140;
+SELECT patient_id FROM dongnai.cardio_patient_bp WHERE max_bp_systolic >= 140;

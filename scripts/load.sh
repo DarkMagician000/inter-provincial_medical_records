@@ -78,6 +78,6 @@ for site in "${sites[@]}"; do
         psql_at ref -c "\copy ($query) TO STDOUT (FORMAT csv)" |
             psql_at "$site" -c "\copy $table FROM STDIN (FORMAT csv)"
     done
-    psql_at "$site" -1 -v "site=$site" -v "site_no=${site_numbers[$site]}" -f sql/site_constraints.sql -c 'ANALYZE;'
+    psql_at "$site" -1 -v "site=$site" -v "site_no=${site_numbers[$site]}" -f sql/site_constraints.sql -f sql/site_views.sql -c 'ANALYZE;'
 done
 printf '%s\n' 'Reference and all four sites loaded.'
