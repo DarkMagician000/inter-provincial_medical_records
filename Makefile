@@ -33,3 +33,15 @@ test:
 	assert compose["name"] == "cs5104final"; \
 	assert set(compose["services"]) == set(config["sites"]) | {"ref"}; \
 	assert all(compose["services"][name]["profiles"] == [site["machine"]] and int(compose["services"][name]["ports"][0]["published"]) == site["port"] and compose["services"][name]["environment"]["POSTGRES_DB"] == config["dbname"] for name, site in {**config["sites"], "ref": config["ref"]}.items())'
+
+.PHONY: link check
+
+link:
+	bash scripts/link.sh
+
+check:
+	@if [[ -x "$$HOME/cs5104-venv/bin/python" ]]; then \
+		"$$HOME/cs5104-venv/bin/python" scripts/check.py; \
+	else \
+		python3 scripts/check.py; \
+	fi
