@@ -1,0 +1,26 @@
+Python 3.13.11; psycopg 3.3.6; PostgreSQL 180006; runs=5; autocommit; unprepared
+Append  (cost=1.38..4902.42 rows=1301 width=186) (actual time=101.854..132.880 rows=1436.00 loops=1)
+  Buffers: shared hit=737
+  InitPlan 1
+    ->  Seq Scan on public.hospital  (cost=0.00..1.38 rows=10 width=4) (actual time=0.015..0.017 rows=10.00 loops=1)
+          Output: hospital.hospital_id
+          Filter: (hospital.province = 'tayninh'::text)
+          Rows Removed by Filter: 20
+          Buffers: shared hit=1
+  ->  Seq Scan on public.visit  (cost=0.00..1475.94 rows=427 width=186) (actual time=0.017..1.415 rows=1359.00 loops=1)
+        Output: visit.visit_id, visit.patient_id, visit.hospital_id, visit.specialty, visit.visit_date, visit.result
+        Filter: ((visit.visit_date >= '2026-03-01'::date) AND (visit.visit_date < '2026-04-01'::date) AND (visit.hospital_id = ANY ((InitPlan 1).col1)))
+        Rows Removed by Filter: 25548
+        Buffers: shared hit=736
+  ->  Async Foreign Scan on hcm.visit visit_1  (cost=100.00..1790.18 rows=481 width=186) (actual time=36.623..36.626 rows=43.00 loops=1)
+        Output: visit_1.visit_id, visit_1.patient_id, visit_1.hospital_id, visit_1.specialty, visit_1.visit_date, visit_1.result
+        Remote SQL: SELECT visit_id, patient_id, hospital_id, specialty, visit_date, result FROM public.visit WHERE ((visit_date >= '2026-03-01')) AND ((visit_date < '2026-04-01')) AND ((hospital_id = ANY ($1::integer[])))
+        Buffers: shared hit=1
+  ->  Async Foreign Scan on cantho.visit visit_2  (cost=100.00..976.30 rows=236 width=186) (actual time=34.753..34.754 rows=17.00 loops=1)
+        Output: visit_2.visit_id, visit_2.patient_id, visit_2.hospital_id, visit_2.specialty, visit_2.visit_date, visit_2.result
+        Remote SQL: SELECT visit_id, patient_id, hospital_id, specialty, visit_date, result FROM public.visit WHERE ((visit_date >= '2026-03-01')) AND ((visit_date < '2026-04-01')) AND ((hospital_id = ANY ($1::integer[])))
+  ->  Async Foreign Scan on dongnai.visit visit_3  (cost=100.00..652.12 rows=157 width=187) (actual time=30.703..30.704 rows=17.00 loops=1)
+        Output: visit_3.visit_id, visit_3.patient_id, visit_3.hospital_id, visit_3.specialty, visit_3.visit_date, visit_3.result
+        Remote SQL: SELECT visit_id, patient_id, hospital_id, specialty, visit_date, result FROM public.visit WHERE ((visit_date >= '2026-03-01')) AND ((visit_date < '2026-04-01')) AND ((hospital_id = ANY ($1::integer[])))
+Planning Time: 0.262 ms
+Execution Time: 338.894 ms

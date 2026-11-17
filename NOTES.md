@@ -86,9 +86,8 @@ Giáo trình CS5104 (224 tr., Đ.H. Tân Tạo; dựa Özsu & Valduriez 2020). T
 - [2026-11-16] Kiểm tra máy qua SSH (user labsoe, key ~/.ssh/id_ed25519, vào qua OpenVPN):
   .201 labsoe-05: Ubuntu 24.04, 12 CPU, 7 GB RAM, Docker 29.8.2 (labsoe trong nhóm docker), psql 18.4, đã có PostgreSQL host nghe 127.0.0.1:5432 → container dùng cổng khác. NIC LAN = wlo1 (Wi-Fi). tc có. sudo cần mật khẩu.
   .202 labsoe-07: Ubuntu 22.04 (khác .201), 12 CPU, 7 GB, Docker 29.8.2 OK, không có psql, NIC wlo1 (Wi-Fi), tc có. sudo cần mật khẩu.
-  .203 labsoe-06: user **labsit06** (khác 2 máy kia), Ubuntu 22.04, 12 CPU, 7 GB, Docker 29.8.2 OK, không psql, wlo1 Wi-Fi, tc có, sudo cần mật khẩu, tailscale0 100.64.0.4.
+  .203 labsoe-06: user **labsit06** (khác 2 máy kia), Ubuntu 22.04, 12 CPU, 7 GB, Docker 29.8.2 OK, không psql, wlo1 Wi-Fi, tc có, sudo cần mật khẩu.
   RTT LAN đo từ .201 (ping ×5): →.202 avg 5,17 ms (mdev 0,59); →.203 avg 5,81 ms (mdev 0,90). Trễ nền Wi-Fi ~5 ms, đáng kể so với 30 ms netem → N3 phải trừ nền.
-  Cả .201/.202 đã có tailscale0 (100.64.0.2/.3) thuộc tailnet KHÁC tailnet của laptop (laptop đang ở tailnet công ty) → SSH timeout.
   Rủi ro: LAN là Wi-Fi → jitter làm nhiễu N3; netem phải gắn đúng card wlo1 hoặc trong container.
 
 # Tasks
@@ -122,8 +121,38 @@ Cơ chế triển khai (Claude chốt 2026-11-17, dựa kiểm máy):
       - `scripts/check.py` (chạy trên A, psycopg từ ~/cs5104-venv): (a) 3 quy tắc Mã 2.1 cho 8 bảng bị chia — đầy đủ + tái tạo (so all_* với ref, EXCEPT ALL 2 chiều hoặc so hash từng dòng), rời nhau (GROUP BY khoá HAVING count>1 trên all_*); (b) đúng vùng patient; (c) FK mồ côi = 0 mỗi trạm; (d) hospital/drug 4 trạm giống hệt ref; (e) jsonb ↔ bảng quan hệ khớp; (f) Q1–Q5 trung tâm = ref; (g) EXPLAIN Q1 không có "Foreign Scan". In PASS/FAIL, exit≠0 nếu FAIL.
       Kiểm chứng: `make link && make check` trên A toàn PASS; Q1 = 1464, Q3 = 1436, Q4 = Q5 = 7516, Q2 khớp 4 số Đã chốt.
 
-## Chờ
-- [ ] T3 bench/delay-on/delay-off/results.csv + EXPLAIN; T4 entry UI; T5 dashboard; T6 `make all`; README (Claude) — viết sau khi T1–T2 chạy.
+Quota Codex: nếu hết, hồi lúc ~2026-11-18 01:40 (user báo 21:30 ngày 17). Hết quota → ghi trạng thái task ở đây, chờ tới mốc đó rồi giao lại, không tự implement.
+
+Quyết định thêm (2026-11-17):
+- Đã thêm khoá công khai `~/.ssh/id_rsa.pub` của A vào authorized_keys của B/C + known_hosts của A → A điều khiển B/C (make all, D8 tắt trạm hcm từ A).
+- Make target mới viết dạng mảnh `mk/<tên>.mk` để các task chạy song song không đụng Makefile; Makefile `-include mk/*.mk`.
+- Sau D7 (đã thêm dòng mới) `make check` vẫn phải PASS (D2 vẫn đạt): so tái tạo/đầy đủ với ref chỉ trên dòng id gốc (≤ max gốc); dòng mới kiểm: id thuộc dải của chính trạm lưu, đúng vùng, FK, không trùng. So Q1–Q5 với ref: khi có dòng mới → SKIP có ghi số dòng mới (ref là ảnh chụp tập trung lúc nạp; `make load` đưa về gốc).
+- Định tuyến giao diện nhập: người nhập chọn tỉnh cư trú bệnh nhân → trạm đích (đúng quy tắc chia). Không dò trạm khác; trạm đích chết → báo lỗi tên trạm/máy, không ghi chỗ khác. FK patient chặn chọn sai tỉnh.
+
+- [ ] **T3 [Codex] bench + delay** — `scripts/bench.py`, `scripts/delay.sh`, `mk/bench.mk`. Chi tiết trong prompt Codex (lưu ở mục Xong khi xong).
+- [ ] **T4 [Codex] entry UI** — `scripts/entry.py` (stdlib http.server + psycopg, cổng 8080), `mk/entry.mk`.
+- [ ] **T5 [Codex] dashboard** — `scripts/dashboard.py` (stdlib http.server + psycopg, cổng 8090, poll 1 s), `mk/dash.mk`.
+- [x] **T2 — XONG 2026-11-17 (commit d7d378a), Claude chạy trên A:** `make link` + `make check` 10 s, toàn PASS. Q1 1464 (không Foreign Scan), Q2 khớp 4 số, Q3 1436, Q4 = Q5 = 7516, FK mồ côi 0, hospital/drug giống ref, jsonb ↔ quan hệ khớp.
+  Phát hiện: mặc định (không `use_remote_estimate`) planner KHÔNG đẩy join/gộp Q2 xuống trạm xa (kéo prescription+visit+patient về, Q2 ≈ 1000 ms). Bật `use_remote_estimate 'true'` → Q2 thành Async Foreign Scan, Remote SQL chứa `sum(...) GROUP BY` → 1 dòng/trạm (≈ 570 ms, phần còn lại là tính join ở trạm + nhánh tayninh). Q5: join đẩy xuống, `DISTINCT` không đẩy → đổi `GROUP BY v.patient_id`. Đây là con số cho N2/N3 (so trước/sau).
+- [x] **T3 bench/delay — commit 7d1c262, Claude chạy trên A:** `make bench` 41 s, ra đủ results.csv, explain/×10, n1/n4/n5, n5_gin. delay.sh lọc đúng dport 5434–5436: Q1 2,3 → 2,3 ms (không đổi), Q3 49 → 537 ms. N4: liên vùng 7,34 / 7,11 / 7,02 / 6,98 %. N5: cột jsonb 13,2 MB vs 5 bảng quan hệ 13,5 MB; GIN jsonb_ops 2,9 MB, jsonb_path_ops 2,4 MB; truy vấn `@>` 12,3 → 1,6 / 1,3 ms.
+- [~] **T4 entry / T5 dashboard — Codex hết quota giữa chừng (2026-11-17 21:30), file đã viết, selftest PASS, Claude chạy thật trên A:** D7: nhập tay vào hcm → patient 2000001 / visit 2000001, báo "Liên vùng: Có" (BV 1 Tây Ninh); "thêm 100 ngẫu nhiên" cả 4 trạm OK (≈ 1 s/trạm xa). D8: `docker stop final_hcm` → dashboard đỏ + sự kiện "Mất kết nối" trong ≤ 3 s, entry báo lỗi đúng trạm/máy/IP, "không chuyển sang trạm khác"; Q1 vẫn chạy; Q2 lỗi "could not connect to server hcm"; start lại → xanh + "Đã kết nối lại", Q2 chạy lại. Dashboard có bảng đối chiếu ref + cột dòng mới. Chưa commit bởi Codex → Claude commit nguyên trạng.
+- Đo pushdown (Claude, 2026-11-17, trễ 0 / 30 ms, trung vị thô):
+  | Q2 cách viết | 0 ms | 30 ms | Remote SQL |
+  |---|---|---|---|
+  | 4 nhánh join (hiện tại), mặc định | 930 | 2900 | kéo prescription + visit 2025 + patient riêng → join ở trung tâm |
+  | + `use_remote_estimate` (server) | 570–750 | 3900 | đẩy được `sum … GROUP BY`, nhưng **planning 1–2,8 s** (EXPLAIN từng trạm qua mạng) |
+  | + `use_remote_estimate` (chỉ bảng lớn) | 225 | 2330 | như trên, planning vẫn đắt khi trễ |
+  | **view gộp sẵn ở mỗi trạm** `drug_cost_by_year` | **100** | **456** | `SELECT home_province, total_cost FROM drug_cost_by_year WHERE year = 2025` → 1 dòng/trạm |
+  Q5: join visit_cardio⋈visit không bao giờ đẩy xuống nếu không có remote estimate (EXISTS cũng không) → kéo cả visit trạm xa; Q5 30 ms ≈ 1,1–1,5 s. → **Chốt: thêm view ở mỗi trạm** (đề cho phép "thêm khung nhìn"): đúng Mã 3.2 giáo trình (gộp 2 giai đoạn: mỗi trạm gộp trước), không phụ thuộc cost model, planning ~1 ms. Lý do loại use_remote_estimate: planning tốn thêm vòng khứ hồi mỗi bảng → chậm hơn khi có trễ; số liệu này đưa vào N2/N3.
+- [ ] **T6 [Codex] Hoàn thiện** (quota Codex hồi ~2026-11-18 01:40). Một agent, tuần tự:
+      a) `sql/site_views.sql` chạy ở **cả 4 trạm** cuối `load.sh` (sau site_constraints): `drug_cost_by_year(home_province, year, total_cost)` = SUM(pr.quantity*d.price) theo patient.home_province, extract(year from visit_date)::int; `cardio_patient_bp(patient_id, max_bp_systolic)` = SELECT v.patient_id, max(c.bp_systolic) FROM visit_cardio c JOIN visit v USING(visit_id) GROUP BY 1. Không tạo ở ref.
+      b) `sql/queries/q2.sql` = nhánh tayninh dùng view cục bộ `drug_cost_by_year WHERE year = 2025` + 3 nhánh `<s>.drug_cost_by_year WHERE year = 2025` (UNION ALL); `q5.sql` = 4 nhánh `SELECT patient_id FROM <s>.cardio_patient_bp WHERE max_bp_systolic >= 140`. Comment SQL giải thích gộp 2 giai đoạn + bệnh nhân rời nhau. Kết quả phải = ref (đã kiểm: Q2 view ra đúng số).
+      c) `link.sh`: KHÔNG dùng use_remote_estimate; IMPORT FOREIGN SCHEMA đã gồm view. check.py: mục pushdown đổi thành PASS/FAIL thật: Q2, Q5 EXPLAIN VERBOSE có đúng 3 Foreign Scan, Remote SQL chứa tên view; Q1 không Foreign Scan.
+      d) check.py theo quy tắc dòng mới (xem "Quyết định thêm"): tái tạo/đầy đủ so ref chỉ trên id gốc (patient_id ≤ 20000, visit_id ≤ 80000, prescription_id ≤ 200000; bảng con theo visit_id ≤ 80000); dòng mới: id ∈ dải trạm đang chứa (site_no·10⁶+1 … +999999), rời nhau toàn hệ (đã có), FK, đúng vùng, jsonb↔quan hệ (đã có, gồm dòng mới). Q1–Q5 so ref: nếu có dòng mới → in `SKIP (N dòng mới; chạy make load để so lại)`, không FAIL. Sau D7 `make check` phải exit 0.
+      e) `Makefile`: thêm `-include mk/*.mk` (bỏ trùng định nghĩa link/check nếu chuyển sang mk); thêm `site-down SITE=x` / `site-up SITE=x`: đọc deploy.toml lấy machine → nếu máy A thì `docker stop/start final_<site>`, nếu B/C thì `ssh <user@ip> docker stop/start final_<site>` (A đã có khoá sang B/C: labsoe@192.168.80.202, labsit06@192.168.80.203 — thêm khoá `ssh_user` cho machines trong deploy.toml); `all`: trên A — push mã sang B/C bằng `tar | ssh` (như deploy.sh), `ssh … make up MACHINE=B|C`, `make up MACHINE=A`, rồi `data load link check bench`; dừng ở lỗi đầu tiên.
+      f) Review nhanh scripts/entry.py, scripts/dashboard.py (T4/T5 bị cắt quota, đã chạy được) — chỉ sửa lỗi thật, không viết lại.
+      Kiểm chứng (Claude): `make all` từ A chạy hết exit 0; Q2 < 150 ms không trễ; D7 xong `make check` exit 0; `make site-down SITE=hcm` / `site-up`.
+- [ ] **README.md [Claude]** — hướng dẫn dựng lại hệ, lệnh make, demo D1–D8, ghi rõ dùng AI.
 ## Xong
 - [x] [Claude, 2026-11-17] `docs/design.html` — bản nháp M1 trả lời đủ 6 câu Mục 3 + trung tâm/Q1–Q5 + phương án loại + rủi ro.
 - [x] [Codex, 2026-11-16] Bỏ n-n khỏi sơ đồ: còn 9 cạnh FK trực tiếp (6 × 1-n, 3 × 1-1). HTML 111 KB.

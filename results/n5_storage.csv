@@ -1,0 +1,11 @@
+metric,bytes,pretty
+jsonb_column_total,13230835,13 MB
+visit_total,19939328,19 MB
+visit_cardio_total,2834432,2768 kB
+visit_eye_total,2154496,2104 kB
+visit_eye_diagnosis_total,3932160,3840 kB
+visit_blood_total,1384448,1352 kB
+visit_blood_test_total,3244032,3168 kB
+relational_total,13549568,13 MB
+gin_jsonb_ops,2998272,2928 kB
+gin_jsonb_path_ops,2506752,2448 kB

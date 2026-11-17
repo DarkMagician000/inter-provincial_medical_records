@@ -1,0 +1,28 @@
+Python 3.13.11; psycopg 3.3.6; PostgreSQL 180006; runs=5; autocommit; unprepared
+HashAggregate  (cost=1377.42..1377.45 rows=3 width=13) (actual time=2.553..2.554 rows=3.00 loops=1)
+  Output: v.specialty, count(*)
+  Group Key: v.specialty
+  Batches: 1  Memory Usage: 32kB
+  Buffers: shared hit=792
+  ->  Hash Join  (cost=226.48..1369.98 rows=1487 width=5) (actual time=1.050..2.378 rows=1464.00 loops=1)
+        Output: v.specialty
+        Inner Unique: true
+        Hash Cond: (v.patient_id = p.patient_id)
+        Buffers: shared hit=792
+        ->  Seq Scan on public.visit v  (cost=0.00..1139.61 rows=1487 width=9) (actual time=0.003..1.149 rows=1464.00 loops=1)
+              Output: v.visit_id, v.patient_id, v.hospital_id, v.specialty, v.visit_date, v.result
+              Filter: ((v.visit_date >= '2026-03-01'::date) AND (v.visit_date < '2026-04-01'::date))
+              Rows Removed by Filter: 25443
+              Buffers: shared hit=736
+        ->  Hash  (cost=141.24..141.24 rows=6819 width=4) (actual time=1.045..1.045 rows=6819.00 loops=1)
+              Output: p.patient_id
+              Buckets: 8192  Batches: 1  Memory Usage: 304kB
+              Buffers: shared hit=56
+              ->  Seq Scan on public.patient p  (cost=0.00..141.24 rows=6819 width=4) (actual time=0.001..0.537 rows=6819.00 loops=1)
+                    Output: p.patient_id
+                    Filter: (p.home_province = 'tayninh'::text)
+                    Buffers: shared hit=56
+Planning:
+  Buffers: shared hit=6
+Planning Time: 0.085 ms
+Execution Time: 2.567 ms

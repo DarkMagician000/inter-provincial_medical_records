@@ -1,0 +1,53 @@
+Python 3.13.11; psycopg 3.3.6; PostgreSQL 180006; runs=5; autocommit; unprepared
+Append  (cost=1351.38..5800.57 rows=9348 width=4) (actual time=3.926..63.705 rows=7516.00 loops=1)
+  Buffers: shared hit=814
+  ->  HashAggregate  (cost=1351.38..1382.06 rows=3068 width=4) (actual time=3.925..4.064 rows=2472.00 loops=1)
+        Output: v.patient_id
+        Group Key: v.patient_id
+        Batches: 1  Memory Usage: 153kB
+        Buffers: shared hit=814
+        ->  Hash Join  (cost=268.00..1343.71 rows=3068 width=4) (actual time=0.640..3.590 rows=3068.00 loops=1)
+              Output: v.patient_id
+              Inner Unique: true
+              Hash Cond: (v.visit_id = c.visit_id)
+              Buffers: shared hit=814
+              ->  Seq Scan on public.visit v  (cost=0.00..1005.07 rows=26907 width=8) (actual time=0.007..1.013 rows=26907.00 loops=1)
+                    Output: v.visit_id, v.patient_id, v.hospital_id, v.specialty, v.visit_date, v.result
+                    Buffers: shared hit=736
+              ->  Hash  (cost=229.65..229.65 rows=3068 width=4) (actual time=0.629..0.629 rows=3068.00 loops=1)
+                    Output: c.visit_id
+                    Buckets: 4096  Batches: 1  Memory Usage: 140kB
+                    Buffers: shared hit=78
+                    ->  Seq Scan on public.visit_cardio c  (cost=0.00..229.65 rows=3068 width=4) (actual time=0.005..0.442 rows=3068.00 loops=1)
+                          Output: c.visit_id
+                          Filter: (c.bp_systolic >= 140)
+                          Rows Removed by Filter: 9064
+                          Buffers: shared hit=78
+  ->  HashAggregate  (cost=2265.10..2298.92 rows=3382 width=4) (actual time=34.855..34.998 rows=2736.00 loops=1)
+        Output: v_1.patient_id
+        Group Key: v_1.patient_id
+        Batches: 1  Memory Usage: 217kB
+        ->  Foreign Scan  (cost=384.11..2256.64 rows=3382 width=4) (actual time=34.364..34.455 rows=3382.00 loops=1)
+              Output: v_1.patient_id
+              Relations: (hcm.visit_cardio c_1) INNER JOIN (hcm.visit v_1)
+              Remote SQL: SELECT r2.patient_id FROM (public.visit_cardio r1 INNER JOIN public.visit r2 ON (((r1.visit_id = r2.visit_id)) AND ((r1.bp_systolic >= 140))))
+  ->  HashAggregate  (cost=1231.78..1249.47 rows=1769 width=4) (actual time=21.525..21.599 rows=1424.00 loops=1)
+        Output: v_2.patient_id
+        Group Key: v_2.patient_id
+        Batches: 1  Memory Usage: 121kB
+        ->  Foreign Scan  (cost=251.29..1227.36 rows=1769 width=4) (actual time=21.268..21.316 rows=1769.00 loops=1)
+              Output: v_2.patient_id
+              Relations: (cantho.visit_cardio c_2) INNER JOIN (cantho.visit v_2)
+              Remote SQL: SELECT r2.patient_id FROM (public.visit_cardio r1 INNER JOIN public.visit r2 ON (((r1.visit_id = r2.visit_id)) AND ((r1.bp_systolic >= 140))))
+  ->  HashAggregate  (cost=812.09..823.38 rows=1129 width=4) (actual time=2.680..2.735 rows=884.00 loops=1)
+        Output: v_3.patient_id
+        Group Key: v_3.patient_id
+        Batches: 1  Memory Usage: 89kB
+        ->  Foreign Scan  (cost=193.74..809.27 rows=1129 width=4) (actual time=2.514..2.549 rows=1129.00 loops=1)
+              Output: v_3.patient_id
+              Relations: (dongnai.visit_cardio c_3) INNER JOIN (dongnai.visit v_3)
+              Remote SQL: SELECT r2.patient_id FROM (public.visit_cardio r1 INNER JOIN public.visit r2 ON (((r1.visit_id = r2.visit_id)) AND ((r1.bp_systolic >= 140))))
+Planning:
+  Buffers: shared hit=12
+Planning Time: 69.184 ms
+Execution Time: 74.030 ms
